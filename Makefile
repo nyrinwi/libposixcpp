@@ -10,8 +10,12 @@ CXXFLAGS+=--coverage
 LDLIBS+=-lgcov
 endif
 
-LIBSOURCES=File.cpp PosixError.cpp
-TESTSOURCES=FileTester.cpp PosixErrorTester.cpp Pipe.cpp
+LIBSOURCES=File.cpp PosixError.cpp Pipe.cpp
+TESTSOURCES=\
+	FileTester.cpp \
+	PosixErrorTester.cpp \
+	PipeTester.cpp \
+	$()
 
 LIBOBJS=$(LIBSOURCES:.cpp=.o)
 TESTOBJS=$(TESTSOURCES:.cpp=.o)
