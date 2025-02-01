@@ -11,12 +11,12 @@ LDLIBS+=-lgcov
 endif
 
 LIBSOURCES=File.cpp PosixError.cpp
-TESTSOURCES=FileTester.cpp PosixErrorTester.cpp
+TESTSOURCES=FileTester.cpp PosixErrorTester.cpp Pipe.cpp
 
 LIBOBJS=$(LIBSOURCES:.cpp=.o)
 TESTOBJS=$(TESTSOURCES:.cpp=.o)
 
-all:: tester test
+all:: tester
 
 test:
 	./tester

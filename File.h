@@ -2,6 +2,9 @@
 #include <sys/file.h>
 #include <string>
 
+#ifndef FILE_H
+#define FILE_H
+
 namespace posixcpp
 {
 
@@ -60,3 +63,6 @@ public:
 };
 
 };
+
+#endif
+
