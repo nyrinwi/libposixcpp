@@ -19,7 +19,7 @@ public:
     {
     };
 
-    SocketPair(int domain, int type, int protocol);
+    SocketPair(int domain, int type, int protocol=0);
 
     SocketPair(SocketPair&& other) noexcept    // move
     {

@@ -21,6 +21,7 @@ TESTSOURCES=\
 	FileTester.cpp \
 	PosixErrorTester.cpp \
 	PipeTester.cpp \
+	SocketPairTester.cpp \
 	$()
 
 LIBOBJS=$(LIBSOURCES:.cpp=.o)
