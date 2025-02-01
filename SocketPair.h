@@ -1,20 +1,41 @@
-#ifndef FOO_H
-#define FOO_H
+#ifndef SOCKETPAIR_H
+#define SOCKETPAIR_H
 
+#include <sys/types.h>
+#include <sys/socket.h>
 #include "File.h"
 
 namespace posixcpp
 {
 
-class Pipe
+class SocketPair
 {
 protected:
     File m_reader;
     File m_writer;
 
 public:
-    Pipe();
-    Pipe(int readFd, int writefd);
+    SocketPair()
+    {
+    };
+
+    SocketPair(int domain, int type, int protocol);
+
+    SocketPair(SocketPair&& other) noexcept    // move
+    {
+        m_reader = std::move(other.m_reader);
+        m_writer = std::move(other.m_writer);
+    };
+
+    SocketPair& operator=(SocketPair&& other) noexcept // move
+    {
+        if (this != &other)
+        {
+            m_reader = std::move(other.m_reader);
+            m_writer = std::move(other.m_writer);
+        }
+        return *this;
+    };
 
     File& reader()
     {
@@ -26,24 +47,8 @@ public:
         return m_writer;
     };
 
-    Pipe(Pipe&& other) noexcept    // move
-    {
-        m_reader = std::move(other.m_reader);
-        m_writer = std::move(other.m_writer);
-    };
-
-    Pipe& operator=(Pipe&& other) noexcept // move
-    {
-        if (this != &other)
-        {
-            m_reader = std::move(other.m_reader);
-            m_writer = std::move(other.m_writer);
-        }
-        return *this;
-    };
 };
 
-};
-
+}
 #endif
 
