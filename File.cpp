@@ -1,8 +1,10 @@
+#include <unistd.h>
 #include <sys/file.h>
 #include <sys/errno.h>
 #include <sys/stat.h>
 #include <cstring>
 #include <array>
+#include <vector>
 #include <string>
 #include <sstream>
 #include <iostream>
@@ -93,7 +95,7 @@ ssize_t File::read(void *buf, size_t count) const
     return ret;
 }
 
-ssize_t File::write(void *buf, size_t count) const
+ssize_t File::write(const void *buf, size_t count) const
 {
     ssize_t ret = ::write(m_fd,buf,count);
     PosixError::ASSERT(ret!=-1,"write");
@@ -110,6 +112,12 @@ off_t File::lseek(off_t offset, int whence) const
         throw PosixError(oss.str());
     }
     return ret;
+}
+
+void File::ftruncate(off_t length)
+{
+    int r = ::ftruncate(m_fd,length);
+    PosixError::ASSERT(r!=-1,"ftruncate");
 }
 
 bool File::fdValid() const

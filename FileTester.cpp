@@ -153,3 +153,42 @@ TEST(File,mkstemp_etc)
     ASSERT_FALSE(ff.fdValid());
 }
 
+TEST_F(FileTester,Templates)
+{
+    ssize_t n;
+    std::vector<double> writeData{1,2,3,4,5};
+    std::vector<double> readback;
+
+    File bytes(m_bytes,O_RDWR);
+    bytes.ftruncate(0);
+    n = bytes.write(writeData);
+    ASSERT_EQ(writeData.size()*sizeof(writeData[0]),(unsigned)n);
+
+    bytes.lseek(0);
+    n = bytes.read(readback,writeData.size());
+    ASSERT_EQ(writeData.size()*sizeof(writeData[0]),(unsigned)n);
+
+    ASSERT_EQ(writeData,readback);
+
+    n = bytes.read(readback,writeData.size());
+    ASSERT_EQ(0,n);
+}
+
+TEST_F(FileTester,array)
+{
+    ssize_t n;
+    std::array<double,5> writeData{1,2,3,4,5};
+    std::vector<double> readback;
+
+    File bytes(m_bytes,O_RDWR);
+    bytes.ftruncate(0);
+    n = bytes.write(writeData);
+
+    bytes.lseek(0);
+    n = bytes.read(readback,writeData.size());
+    ASSERT_EQ(writeData.size()*sizeof(writeData[0]),(unsigned)n);
+    for(unsigned i=0; i<writeData.size(); i++)
+    {
+        ASSERT_EQ(writeData[i],readback[i]);
+    }
+}
