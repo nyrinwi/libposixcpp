@@ -3,30 +3,40 @@
 #include "File.h"
 #include "PosixError.h"
 #include <gtest/gtest.h>
+#include <sys/resource.h>
 
 using namespace posixcpp;
 
 class FileTester : public ::testing::Test
 {
     int fds[2];
+    int maxFiles;
 public:
-    std::string m_bytes;
+    std::string m_filename;
     
     int readFd() {return fds[0];};
     int writeFd() {return fds[1];};
+
     void SetUp()
     {
-        // TODO: make this a static method or a class
-        int r = pipe(&fds[0]);
+        struct rlimit limit;
+        int r = getrlimit(RLIMIT_NOFILE,&limit);
+        PosixError::ASSERT(r==0,"getrlimit");
+        maxFiles = limit.rlim_cur;
+
+        // Create a pipe for testing
+        r = pipe(&fds[0]);
         PosixError::ASSERT(r==0,"pipe");
 
+        // Fill m_filename file with sequential bytes
+        m_filename = "test.dat";
         std::array<uint8_t,256> bytes;
         for(int i=0; i<256; i++)
         {
             bytes[i] = i;
         }
-        m_bytes = "bytes.dat";
-        std::ofstream fp(m_bytes);
+
+        std::ofstream fp(m_filename);
         fp.write((char*)&bytes[0],bytes.size());
         fp.close();
 
@@ -35,7 +45,7 @@ public:
     {
         ::close(fds[0]);
         ::close(fds[1]);
-        ::unlink(m_bytes.c_str());
+        ::unlink(m_filename.c_str());
     };
 };
 
@@ -69,7 +79,7 @@ TEST_F(FileTester,withFd)
 TEST_F(FileTester,lseek)
 {
     int seekLoc = 128;
-    File bytes(m_bytes,O_RDONLY);
+    File bytes(m_filename,O_RDONLY);
     auto nn = bytes.lseek(seekLoc);
     ASSERT_EQ(nn,seekLoc);
     nn = bytes.lseek(0,SEEK_CUR);
@@ -94,7 +104,7 @@ TEST_F(FileTester,lseek)
 TEST_F(FileTester,move1)
 {
     // Calls File::File(File&& other)
-    auto aaa = File(m_bytes,O_RDWR);
+    auto aaa = File(m_filename,O_RDWR);
     int fd = aaa.fd();
     File bbb = std::move(aaa);
     ASSERT_EQ(-1,aaa.fd()) << "moved fd should be -1";
@@ -104,7 +114,7 @@ TEST_F(FileTester,move1)
 TEST_F(FileTester,move2)
 {
     // Calls File::operator=(File&& other)
-    std::string filename = m_bytes;
+    std::string filename = m_filename;
     std::vector<File> foo(3);
     std::generate(foo.begin(),foo.end(),[filename](){return File(filename,O_RDONLY);});
     foo[0] = foo.back();
@@ -113,8 +123,8 @@ TEST_F(FileTester,move2)
 TEST_F(FileTester,fd_and_copy)
 {
     // fds increment by one with each open call
-    File file1(m_bytes,O_RDONLY);
-    File file2(m_bytes,O_RDONLY);
+    File file1(m_filename,O_RDONLY);
+    File file2(m_filename,O_RDONLY);
     ASSERT_GT(file2.fd(),file1.fd());
     ASSERT_EQ(1,file2.fd()-file1.fd());
 
@@ -132,8 +142,8 @@ TEST_F(FileTester,fd_and_copy)
 
 TEST_F(FileTester,creat)
 {
-    ::unlink(m_bytes.c_str());
-    File file(File::creat(m_bytes,O_RDONLY));
+    ::unlink(m_filename.c_str());
+    File file(File::creat(m_filename,O_RDONLY));
     ASSERT_TRUE(file.exists());
 }
 
@@ -159,7 +169,7 @@ TEST_F(FileTester,Templates)
     std::vector<double> writeData{1,2,3,4,5};
     std::vector<double> readback;
 
-    File bytes(m_bytes,O_RDWR);
+    File bytes(m_filename,O_RDWR);
     bytes.ftruncate(0);
     n = bytes.write(writeData);
     ASSERT_EQ(writeData.size()*sizeof(writeData[0]),(unsigned)n);
@@ -178,14 +188,18 @@ TEST_F(FileTester,array)
 {
     ssize_t n;
     std::array<double,5> writeData{1,2,3,4,5};
-    std::vector<double> readback;
+    std::array<double,5> readback;
 
-    File bytes(m_bytes,O_RDWR);
+    File bytes(m_filename,O_RDWR);
     bytes.ftruncate(0);
+
+    // write() can be usd with array
     n = bytes.write(writeData);
 
     bytes.lseek(0);
-    n = bytes.read(readback,writeData.size());
+
+    // array read requires readArray()
+    n = bytes.readArray(readback);
     ASSERT_EQ(writeData.size()*sizeof(writeData[0]),(unsigned)n);
     for(unsigned i=0; i<writeData.size(); i++)
     {

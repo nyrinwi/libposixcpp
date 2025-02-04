@@ -80,6 +80,13 @@ public:
         void* buf = reinterpret_cast<void*>(&data[0]);
         return read(buf,count*sizeof(typename Typ::value_type));
     };
+
+    template <typename Typ>
+    ssize_t readArray(Typ& data) const
+    {
+        void* buf = reinterpret_cast<void*>(&data[0]);
+        return read(buf,data.size()*sizeof(typename Typ::value_type));
+    };
 };
 
 };
