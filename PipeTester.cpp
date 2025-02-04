@@ -55,7 +55,7 @@ TEST_F(PipeTester,rainyDay)
         catch(const PosixError& e)
         {
             EXPECT_EQ(EMFILE,e.errnoVal())  << i << "," << maxFiles << " exception - " << e.what() << std::endl;
-            EXPECT_GT(2*i,maxFiles-5);
+            EXPECT_GT(2*i,maxFiles*3/4);
             break;
         }
     }

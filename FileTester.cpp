@@ -46,6 +46,10 @@ public:
         ::close(fds[0]);
         ::close(fds[1]);
         ::unlink(m_filename.c_str());
+        for(int fd=3; fd<127; fd++)
+        {
+            EXPECT_EQ(-1,::fcntl(fd,F_GETFL)) << "fd: " << fd;
+        }
     };
 };
 
@@ -114,10 +118,15 @@ TEST_F(FileTester,move1)
 TEST_F(FileTester,move2)
 {
     // Calls File::operator=(File&& other)
-    std::string filename = m_filename;
+    std::string& filename = m_filename;
     std::vector<File> foo(3);
     std::generate(foo.begin(),foo.end(),[filename](){return File(filename,O_RDONLY);});
     foo[0] = foo.back();
+    for(auto& ff : foo)
+    {
+        std::cout << (&ff-&foo[0]) << " : fd=" << ff.fd() << std::endl;
+    }
+    foo.clear();
 }
 
 TEST_F(FileTester,fd_and_copy)
@@ -205,4 +214,21 @@ TEST_F(FileTester,array)
     {
         ASSERT_EQ(writeData[i],readback[i]);
     }
+}
+
+TEST_F(FileTester,strings)
+{
+    std::string msg = "Hello World";
+    File file(m_filename,O_RDWR);
+    file.ftruncate(0);
+    file.write(msg);
+
+    file.lseek(0);
+
+    // Why does this work?
+    std::string response;
+    file.read(response,msg.size());
+    ASSERT_NE(0U,msg.size());
+    ASSERT_EQ(msg,std::string(response.begin(),response.end()));
+    ASSERT_EQ(msg,response);
 }

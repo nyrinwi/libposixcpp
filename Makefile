@@ -10,6 +10,8 @@ CXXFLAGS+=--coverage
 LDLIBS+=-lgcov
 endif
 
+all::
+
 LIBSOURCES=\
 	File.cpp \
 	PosixError.cpp \
@@ -33,7 +35,7 @@ test:
 	./tester
 
 tester:: $(TESTOBJS) libposixcpp.a
-	$(CXX) -o $@ $(TESTOBJS) -L. -l posixcpp $(LDLIBS)
+	$(CXX) -o $@ $(TESTOBJS) -L. $(ASAN) -l posixcpp $(LDLIBS)
 
 libposixcpp.a: $(LIBOBJS)
 	rm -f $@
@@ -44,7 +46,6 @@ coverage:
 
 .PHONY: html
 html:
-	-./tester
 	lcov -c -d . -o coverage.info
 	genhtml -o html coverage.info
 

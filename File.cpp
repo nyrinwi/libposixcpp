@@ -57,6 +57,7 @@ File& File::operator=(const File& other) noexcept // copy
     {
         return *this;
     }
+    ::close(m_fd);
     m_filename = other.m_filename;
     m_fd = other.m_fd;
     m_mode = ::fcntl(m_fd,F_GETFL)&MODE_MASK;
@@ -79,6 +80,8 @@ File& File::operator=(File&& other) noexcept // move
     {
         return *this;
     }
+
+    ::close(m_fd);
     m_filename = other.m_filename;
     m_fd = other.m_fd;
     m_mode = ::fcntl(m_fd,F_GETFL)&MODE_MASK;
