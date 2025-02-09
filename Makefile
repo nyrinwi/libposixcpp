@@ -14,15 +14,19 @@ all::
 
 LIBSOURCES=\
 	File.cpp \
+	MemMap.cpp \
 	PosixError.cpp \
 	Pipe.cpp \
+	Socket.cpp \
 	SocketPair.cpp \
 	$()
 
 TESTSOURCES=\
 	FileTester.cpp \
+	MemMapTester.cpp \
 	PosixErrorTester.cpp \
 	PipeTester.cpp \
+	SocketTester.cpp \
 	SocketPairTester.cpp \
 	$()
 
