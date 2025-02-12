@@ -67,6 +67,11 @@ public:
         return m_sizeBytes/sizeof(Typ);
     };
 
+    size_t numPages() const
+    {
+        return (sizeBytes()+getpagesize()-1)/getpagesize();
+    }
+
     Typ* get() const
     {
         return m_ptr.get();
