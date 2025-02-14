@@ -18,12 +18,14 @@ LIBSOURCES=\
 	PosixError.cpp \
 	Pipe.cpp \
 	Socket.cpp \
+	ClientSocket.cpp \
 	SocketPair.cpp \
 	$()
 
 LIBOBJS=$(LIBSOURCES:.cpp=.o)
 
 all:: libposixcpp.a
+	make -C tests 
 
 test:
 	make -C tests test
@@ -31,6 +33,11 @@ test:
 libposixcpp.a: $(LIBOBJS)
 	rm -f $@
 	ar cq $@ $(LIBOBJS)
+
+.PHONY: html
+html:
+	lcov -c -d . -o coverage.info
+	genhtml -o html coverage.info
 
 clean::
 	rm -rf File *.o tester *.a bytes html coverage.info *.gcda *.gcno

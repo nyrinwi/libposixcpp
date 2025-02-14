@@ -11,6 +11,7 @@ class FileTester : public ::testing::Test
 {
     int fds[2];
     int maxFiles;
+    int m_topFd = -1;
 public:
     std::string m_filename;
     
@@ -39,14 +40,21 @@ public:
         std::ofstream fp(m_filename);
         fp.write((char*)&bytes[0],bytes.size());
         fp.close();
-
+        for (int fd=3; fd<20; fd++)
+        {
+            if (::fcntl(fd,F_GETFL)==-1)
+            {
+                m_topFd = fd;
+                break;
+            }
+        }
     };
     void TearDown()
     {
         ::close(fds[0]);
         ::close(fds[1]);
         ::unlink(m_filename.c_str());
-        for(int fd=3; fd<127; fd++)
+        for(int fd=m_topFd; fd<127; fd++)
         {
             EXPECT_EQ(-1,::fcntl(fd,F_GETFL)) << "fd: " << fd;
         }
@@ -59,8 +67,8 @@ TEST_F(FileTester,basic)
 
     for (auto mode : {O_RDONLY, O_WRONLY, O_RDWR})
     {
-        ASSERT_NO_THROW(File file(__FILE__,mode));
-        File file(__FILE__,mode);
+        ASSERT_NO_THROW(File file(m_filename,mode)) << "mode: " << mode;
+        File file(m_filename,mode);
         ASSERT_EQ(mode,file.mode());
     }
 }

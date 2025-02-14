@@ -16,13 +16,13 @@ using namespace posixcpp;
 
 File::File(const std::string& filename, int posixFlags, int mode)
 : m_filename(filename),
-  m_fd(open(filename.c_str(),posixFlags,mode)),
-  m_mode(::fcntl(m_fd,F_GETFL)&MODE_MASK)
+  m_fd(open(filename.c_str(),posixFlags,mode))
 {
     if (m_fd == -1)
     {
         throw PosixError(filename);
     }
+    m_mode = ::fcntl(m_fd,F_GETFL)&MODE_MASK;
 }
 
 File::File(int fd, const std::string& filename)

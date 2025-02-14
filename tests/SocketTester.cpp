@@ -43,3 +43,11 @@ TEST(Socket,shutdown)
     EXPECT_FALSE(sock.shutdown(SHUT_WR|SHUT_RD)); // False tells us we had ENOTCONN
     EXPECT_THROW(sock.shutdown(9999),PosixError); // should be EINVAL
 }
+
+TEST(Socket,getaddrinfo)
+{
+    stringvec_t names;
+    names = Socket::getaddrinfo("localhost");
+    ASSERT_EQ(1U,names.size());
+    ASSERT_EQ("127.0.0.1",names[0]);
+}
