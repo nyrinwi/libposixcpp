@@ -1,6 +1,6 @@
 # vim: noet
 GTESTHOME=/usr/src/googletest/googletest
-CXXFLAGS=-Wall -ggdb -dM
+CXXFLAGS=-Wall -ggdb
 
 CXXFLAGS+=-I $(GTESTHOME)/include
 LDLIBS+=-L $(GTESTHOME)/lib -lgtest_main -lgtest -lpthread

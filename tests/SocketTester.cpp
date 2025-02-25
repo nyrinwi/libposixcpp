@@ -73,5 +73,9 @@ TEST(ClientSocket,basic)
     ASSERT_NE(0U,found.size());
     ClientSocket<AF_INET,SOCK_STREAM> client("localhost",22);
     client.connect();
+    char buf[256];
+    auto r = client.read(&buf[0],sizeof(buf));
+    std::cout << r << std::endl;
+    std::cout << buf << std::endl;
 }
 

@@ -36,6 +36,16 @@ public:
 
     // Returns empty vec if failed, *eaiVal is non-zero if failed
     gai_vec_t  getaddrinfo(const std::string& host, int *eaiVal=NULL);
+
+    ssize_t read(void *buf, size_t count) const
+    {
+        return m_file.read(buf,count);
+    }
+
+    ssize_t write(const void *buf, size_t count) const
+    {
+        return m_file.write(buf,count);
+    }
 };
 
 // socket
