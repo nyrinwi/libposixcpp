@@ -67,15 +67,51 @@ TEST(Socket,getaddrinfo)
     ASSERT_NO_THROW(found = Socket(AF_INET,SOCK_DGRAM).getaddrinfo("lalkjasf"));
 }
 
-TEST(ClientSocket,basic)
+class ClientSocketTester : public ::testing::Test
 {
-    auto found = Socket(AF_INET,SOCK_STREAM).getaddrinfo("localhost");
-    ASSERT_NE(0U,found.size());
-    ClientSocket<AF_INET,SOCK_STREAM> client("localhost",22);
-    client.connect();
-    char buf[256];
-    auto r = client.read(&buf[0],sizeof(buf));
-    std::cout << r << std::endl;
-    std::cout << buf << std::endl;
+public:
+    static const std::string message;
+    FILE* fpNetcat;
+
+    void SetUp() {
+        fpNetcat = popen("netcat -l localhost 5000 > sink.dat","w");
+        assert(fpNetcat != NULL);
+        fwrite(&message[0],message.size(),1,fpNetcat);
+        fflush(fpNetcat);
+        usleep(10000);
+    };
+
+    void TearDown() {
+        pclose(fpNetcat);
+        File file("sink.dat",O_RDWR);
+        file.unlink();
+    }
+};
+
+const std::string ClientSocketTester::message = "Hello World";
+
+TEST_F(ClientSocketTester,basic)
+{
+    ClientSocket<AF_INET,SOCK_STREAM> client("localhost",5000);
+    ASSERT_NO_THROW(client.connect());
+
+    std::array<char,256> buf;
+    auto r = client.read(&buf[0],buf.size());
+    ASSERT_GT(r,0);
+    std::string s(&buf[0],r);
+    ASSERT_EQ(s,"Hello World");
+
+    std::string msg("This is the response");
+    r = client.write(msg);
+    ASSERT_EQ((unsigned)r,msg.size());
+    EXPECT_NO_THROW(client.shutdown(SHUT_WR|SHUT_RD));
+    EXPECT_NO_THROW(client.close());
+    sync();
+
+    std::vector<char> response(256);
+    File sink("sink.dat",O_RDONLY);
+    sink.read(response);
+    std::string responseStr(&response[0]);
+    ASSERT_EQ(msg,responseStr);
 }
 

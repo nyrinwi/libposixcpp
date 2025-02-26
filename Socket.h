@@ -42,9 +42,26 @@ public:
         return m_file.read(buf,count);
     }
 
+    template <typename Typ>
+    ssize_t read(Typ& data, size_t count=0) const
+    {
+        return m_file.read<Typ>(data,count);
+    }
+
+    template <typename Typ>
+    ssize_t write(const Typ& data) const
+    {
+        return m_file.write<Typ>(data);
+    }
+
     ssize_t write(const void *buf, size_t count) const
     {
         return m_file.write(buf,count);
+    }
+
+    void close()
+    {
+        m_file.close();
     }
 };
 
@@ -66,7 +83,13 @@ public:
 
     ~ClientSocket()
     {
-        shutdown();
+        try {
+            shutdown();
+        }
+        catch(const std::exception & e)
+        {
+            (void)e;
+        }
     };
 
     void connect()

@@ -51,11 +51,17 @@ public:
 
     ssize_t write(const void *buf, size_t count) const;
 
-    int close() { return ::close(m_fd); };
+    int close();
 
     off_t lseek(off_t offset, int whence=SEEK_SET) const;
     
     void ftruncate(off_t length);
+
+    void fsync();
+
+    void fdatasync();
+
+    int unlink();
 
     static File mkstemp(const std::string& templ);
 
@@ -73,7 +79,11 @@ public:
     template <typename Typ>
     ssize_t read(Typ& data, size_t count=0) const
     {
-        if (count != data.size())
+        if (count == 0)
+        {
+            count = data.size();
+        }
+        else
         {
             data.resize(count);
         }

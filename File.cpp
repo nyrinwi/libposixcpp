@@ -105,6 +105,17 @@ ssize_t File::write(const void *buf, size_t count) const
     return ret;
 }
 
+int File::close()
+{
+    int fd = m_fd;
+    if (fd == -1)
+    {
+        return 0;
+    }
+    m_fd = -1;
+    return ::close(fd);
+};
+
 off_t File::lseek(off_t offset, int whence) const
 {
     off_t ret = ::lseek(m_fd,offset,whence);
@@ -121,6 +132,28 @@ void File::ftruncate(off_t length)
 {
     int r = ::ftruncate(m_fd,length);
     PosixError::ASSERT(r!=-1,"ftruncate");
+}
+
+void File::fsync()
+{
+    int r = ::fsync(m_fd);
+    PosixError::ASSERT(r!=-1,"fsync");
+}
+
+void File::fdatasync()
+{
+    int r = ::fdatasync(m_fd);
+    PosixError::ASSERT(r!=-1,"fdatasync");
+}
+
+int File::unlink()
+{
+    int r = ::unlink(m_filename.c_str());
+    if (r==-1 and errno != ENOENT)
+    {
+        throw PosixError("unlink failed");
+    }
+    return r;
 }
 
 bool File::fdValid() const

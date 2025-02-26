@@ -28,8 +28,11 @@ TESTOBJS=$(TESTSOURCES:.cpp=.o)
 
 all:: tester
 
+SINK=sink.dat
+
 test:
-	./tester
+	rm -f $(SINK)
+	./tester 
 
 tester:: $(TESTOBJS)
 	$(CXX) -o $@ $(TESTOBJS) -L$(CURDIR)/.. -L. $(ASAN) -l posixcpp $(LDLIBS)
@@ -43,5 +46,5 @@ html:
 	genhtml -o html coverage.info
 
 clean::
-	rm -rf File *.o tester *.a bytes html coverage.info *.gcda *.gcno
+	rm -rf File *.o tester *.a bytes html coverage.info *.gcda *.gcno $(SINK)
 
