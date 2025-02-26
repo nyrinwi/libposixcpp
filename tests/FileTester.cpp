@@ -71,8 +71,29 @@ TEST_F(FileTester,basic)
         File file(m_filename,mode);
         ASSERT_EQ(mode,file.mode());
     }
+    auto fileObj = File(m_filename,O_RDONLY);
+    fileObj.close();
+    EXPECT_NO_THROW(fileObj.close());
 }
 
+TEST_F(FileTester,fsync)
+{
+    auto fileObj = File(m_filename,O_RDWR|O_TRUNC);
+    EXPECT_NO_THROW(fileObj.fsync());
+}
+
+TEST_F(FileTester,fdatasync)
+{
+    auto fileObj = File(m_filename,O_RDWR|O_TRUNC);
+    EXPECT_NO_THROW(fileObj.fdatasync());
+}
+
+TEST_F(FileTester,unlink)
+{
+    auto fileObj = File(m_filename,O_RDWR|O_TRUNC);
+    EXPECT_NO_THROW(fileObj.unlink());
+    EXPECT_NO_THROW(fileObj.unlink());
+}
 TEST_F(FileTester,withFd)
 {
     // Use the pipe as our fd
