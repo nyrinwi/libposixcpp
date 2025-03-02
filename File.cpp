@@ -156,6 +156,25 @@ int File::unlink()
     return r;
 }
 
+struct stat File::fstat(bool force)
+{
+    if (not m_stat or force)
+    {
+        struct stat sbuf;
+        int r = ::fstat(m_fd,&sbuf);
+        if (r == 0)
+        {
+            m_stat = sbuf;;
+        }
+        else
+        {
+            m_stat.reset();
+        }
+        PosixError::ASSERT(r==0,"fstat");
+    }
+    return *m_stat;
+}
+
 bool File::fdValid() const
 {
     int r = ::fcntl(m_fd,F_GETFL);
@@ -184,3 +203,8 @@ File File::creat(const std::string& path, mode_t mode)
     return File(fd,path);
 }
 
+File File::mkdir(const std::string& path, mode_t mode)
+{
+    int fd = ::mkdir(path.c_str(),mode);
+    return File(fd,path);
+}

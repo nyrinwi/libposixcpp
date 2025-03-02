@@ -2,6 +2,7 @@
 #include <sys/file.h>
 #include <string>
 #include <vector>
+#include <optional>
 
 #ifndef FILE_H
 #define FILE_H
@@ -15,6 +16,7 @@ protected:
     mutable std::string m_filename;
     mutable int m_fd;
     mutable int m_mode;
+    std::optional<struct stat> m_stat;
 
     // These are the only bits preserved by the File() object
     static const int MODE_MASK = O_RDONLY|O_RDWR|O_WRONLY;
@@ -24,7 +26,7 @@ public:
 
     File() noexcept;
 
-    File(const std::string& filename, int posixFlags, int perm=PERM_GRWX);
+    File(const std::string& filename, int posixFlags=O_RDONLY, int perm=PERM_GRWX);
 
     File(int fd, const std::string& filename="unnamed");
 
@@ -63,9 +65,13 @@ public:
 
     int unlink();
 
+    struct stat fstat(bool force=false);
+
     static File mkstemp(const std::string& templ);
 
     static File creat(const std::string& path, mode_t mode);
+
+    static File mkdir(const std::string& pathname, mode_t mode);
 
     // TODO: fcntl
 
