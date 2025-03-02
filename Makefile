@@ -1,6 +1,6 @@
 # vim: noet
 GTESTHOME=/usr/src/googletest/googletest
-CXXFLAGS=-Wall -ggdb --std=c++14 
+CXXFLAGS=-Wall -ggdb
 
 CXXFLAGS+=-I $(GTESTHOME)/include
 LDLIBS+=-L $(GTESTHOME)/lib -lgtest_main -lgtest -lpthread
@@ -38,6 +38,12 @@ libposixcpp.a: $(LIBOBJS)
 html:
 	lcov -c -d . -o coverage.info
 	genhtml -o html coverage.info
+
+coverage:
+	make clean
+	make -B -j gcov=1
+	make test
+	make html
 
 clean::
 	rm -rf File *.o tester *.a bytes html coverage.info *.gcda *.gcno
