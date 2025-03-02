@@ -14,6 +14,7 @@ class FileTester : public ::testing::Test
     int m_topFd = -1;
 public:
     std::string m_filename;
+    std::string m_dirname;
     
     int readFd() {return fds[0];};
     int writeFd() {return fds[1];};
@@ -31,6 +32,7 @@ public:
 
         // Fill m_filename file with sequential bytes
         m_filename = "test.dat";
+        m_dirname = "test.dir";
         std::array<uint8_t,256> bytes;
         for(int i=0; i<256; i++)
         {
@@ -53,7 +55,20 @@ public:
     {
         ::close(fds[0]);
         ::close(fds[1]);
-        ::unlink(m_filename.c_str());
+        for (auto path : {m_filename,m_dirname})
+        {
+            try
+            {
+                File(path).remove();
+            }
+            catch(const PosixError& e)
+            {
+                if (e.errnoVal() != ENOENT)
+                {
+                    FAIL() << e.what();
+                }
+            }
+        }
         for(int fd=m_topFd; fd<127; fd++)
         {
             EXPECT_EQ(-1,::fcntl(fd,F_GETFL)) << "fd: " << fd;
@@ -90,10 +105,20 @@ TEST_F(FileTester,fdatasync)
 
 TEST_F(FileTester,unlink)
 {
-    auto fileObj = File(m_filename,O_RDWR|O_TRUNC);
-    EXPECT_NO_THROW(fileObj.unlink());
-    EXPECT_NO_THROW(fileObj.unlink());
+    auto file = File(m_filename);
+    ASSERT_TRUE(file.exists());
+    EXPECT_NO_THROW(file.unlink());
+    ASSERT_FALSE(file.exists());
+    EXPECT_NO_THROW(file.unlink());
+
+    auto dir = File::mkdir(m_dirname,0777);
+    ASSERT_TRUE(dir.exists());
+    EXPECT_THROW(dir.unlink(),PosixError) << "cannot use unlink on a dir";
+    ASSERT_TRUE(dir.exists());
+    file = File::creat(m_dirname+"/foo.dat",S_IRWXU);
+    file.remove();
 }
+
 TEST_F(FileTester,withFd)
 {
     // Use the pipe as our fd
@@ -180,9 +205,32 @@ TEST_F(FileTester,fd_and_copy)
 
 TEST_F(FileTester,creat)
 {
-    ::unlink(m_filename.c_str());
-    File file(File::creat(m_filename,O_RDONLY));
+    ASSERT_NO_THROW(File(m_filename).remove());
+    auto file = File::creat(m_filename,S_IRWXU);
     ASSERT_TRUE(file.exists());
+    ASSERT_TRUE(file.fdValid());
+}
+
+TEST_F(FileTester,mkdir)
+{
+    File dir(File::mkdir(m_dirname,0555));
+    ASSERT_TRUE(dir.exists());
+    dir.remove();
+    ASSERT_FALSE(dir.exists());
+    EXPECT_NO_THROW(dir.remove());
+}
+
+TEST_F(FileTester,stat)
+{
+    auto file = File(m_filename);
+    auto sbuf = file.fstat();
+    auto sbuf1 = file.fstat(); //for coverage
+    ASSERT_EQ(sbuf.st_mode,sbuf1.st_mode);
+    ASSERT_TRUE(S_ISREG(sbuf.st_mode));
+    file.close();
+    EXPECT_NO_THROW(file.fstat()) << "fstat remains until forced";
+    EXPECT_THROW(file.fstat(true),PosixError) << "force fstat on bad file descr";
+    EXPECT_THROW(file.fstat(),PosixError) << "fstat should have been cleared";
 }
 
 TEST(File,mkstemp_etc)
@@ -192,7 +240,7 @@ TEST(File,mkstemp_etc)
     ASSERT_TRUE(ff.fdValid());
 
     // After this, file does not exist but fd is valid
-    remove(ff.filename().c_str());
+    ff.remove();
 
     ASSERT_FALSE(ff.exists());
     ASSERT_TRUE(ff.fdValid());

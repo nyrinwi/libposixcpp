@@ -47,6 +47,7 @@ public:
 
     bool fdValid() const;
 
+    // Requires a stat() call, does not update fstat
     bool exists() const;
 
     ssize_t read(void *buf, size_t count) const;
@@ -63,7 +64,9 @@ public:
 
     void fdatasync();
 
-    int unlink();
+    void unlink();
+
+    void remove();
 
     struct stat fstat(bool force=false);
 

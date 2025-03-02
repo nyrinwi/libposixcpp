@@ -146,14 +146,22 @@ void File::fdatasync()
     PosixError::ASSERT(r!=-1,"fdatasync");
 }
 
-int File::unlink()
+void File::unlink()
 {
     int r = ::unlink(m_filename.c_str());
     if (r==-1 and errno != ENOENT)
     {
         throw PosixError("unlink failed");
     }
-    return r;
+}
+
+void File::remove()
+{
+    int r = ::remove(m_filename.c_str());
+    if (r==-1 and errno != ENOENT)
+    {
+        throw PosixError("remove failed");
+    }
 }
 
 struct stat File::fstat(bool force)
@@ -200,11 +208,13 @@ File File::mkstemp(const std::string& templ)
 File File::creat(const std::string& path, mode_t mode)
 {
     int fd = ::creat(path.c_str(),mode);
+    PosixError::ASSERT(fd!=-1,"creat");
     return File(fd,path);
 }
 
 File File::mkdir(const std::string& path, mode_t mode)
 {
-    int fd = ::mkdir(path.c_str(),mode);
-    return File(fd,path);
+    int r = ::mkdir(path.c_str(),mode);
+    PosixError::ASSERT(r!=-1,"mkdir");
+    return File(path,O_RDONLY);
 }
