@@ -81,8 +81,28 @@ public:
         usleep(10000);
     };
 
+    std::vector<char> readSink()
+    {
+        std::vector<char> ret(256);
+        File sink("sink.dat",O_RDONLY);
+        ssize_t n = sink.read(ret);
+        assert(n >= 0);
+        ret.resize(n);
+        return ret;
+    }
+
+    bool waitForNetcat()
+    {
+        auto ret = pclose(fpNetcat);
+        fpNetcat = NULL;
+        return ret == 0;
+    }
+
     void TearDown() {
-        pclose(fpNetcat);
+        if (fpNetcat)
+        {
+            waitForNetcat();
+        }
         File file("sink.dat",O_RDWR);
         file.unlink();
     }
@@ -106,12 +126,25 @@ TEST_F(ClientSocketTester,basic)
     ASSERT_EQ((unsigned)r,msg.size());
     EXPECT_NO_THROW(client.shutdown(SHUT_WR|SHUT_RD));
     EXPECT_NO_THROW(client.close());
-    sync();
+    waitForNetcat();
 
-    std::vector<char> response(256);
-    File sink("sink.dat",O_RDONLY);
-    sink.read(response);
-    std::string responseStr(&response[0]);
+    std::vector<char> response = readSink();
+    std::string responseStr(&response[0],response.size());
     ASSERT_EQ(msg,responseStr);
+}
+
+TEST_F(ClientSocketTester,send)
+{
+    ClientSocket<AF_INET,SOCK_STREAM> client("localhost",5000);
+    ASSERT_NO_THROW(client.connect());
+
+    std::vector<char> wtf{'w','t','f'};
+    client.send(&wtf[0],wtf.size(),0);
+    EXPECT_NO_THROW(client.shutdown(SHUT_WR|SHUT_RD));
+    client.close();
+    waitForNetcat();
+    std::vector<char> response = readSink();
+    ASSERT_FALSE(response.empty());
+    ASSERT_EQ(wtf,response);
 }
 

@@ -37,15 +37,15 @@ public:
     // Returns empty vec if failed, *eaiVal is non-zero if failed
     gai_vec_t  getaddrinfo(const std::string& host, int *eaiVal=NULL);
 
-    ssize_t read(void *buf, size_t count) const
+    ssize_t read(void *buf, size_t len) const
     {
-        return m_file.read(buf,count);
+        return m_file.read(buf,len);
     }
 
     template <typename Typ>
-    ssize_t read(Typ& data, size_t count=0) const
+    ssize_t read(Typ& data, size_t len=0) const
     {
-        return m_file.read<Typ>(data,count);
+        return m_file.read<Typ>(data,len);
     }
 
     template <typename Typ>
@@ -54,10 +54,16 @@ public:
         return m_file.write<Typ>(data);
     }
 
-    ssize_t write(const void *buf, size_t count) const
+    ssize_t write(const void *buf, size_t len) const
     {
-        return m_file.write(buf,count);
+        return m_file.write(buf,len);
     }
+
+    ssize_t send(const void *buf, size_t len, int flags) const;
+    // sendmsg
+
+    ssize_t sendto(const void *buf, size_t len, int flags,
+                   const struct sockaddr *dest_addr, socklen_t addrlen);
 
     void close()
     {

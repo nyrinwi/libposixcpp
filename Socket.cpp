@@ -41,6 +41,13 @@ bool Socket::shutdown(int how)
     throw PosixError("error in shutdown");
 }
 
+ssize_t Socket::send(const void *buf, size_t len, int flags) const
+{
+    ssize_t r = ::send(fd(),buf,len,flags);
+    PosixError::ASSERT(r != -1);
+    return r;
+}
+
 gai_vec_t Socket::getaddrinfo(const std::string& host, int *eaiVal)
 {
     struct addrinfo hints{0};

@@ -72,13 +72,16 @@ public:
     template <typename Typ>
     ssize_t write(const Typ& data) const
     {
+        size_t elemSize = sizeof(typename Typ::value_type);
         const void* buf = reinterpret_cast<const void*>(&data[0]);
-        return write(buf,data.size()*sizeof(typename Typ::value_type));
+        auto n = write(buf,data.size()*elemSize);
+        return (n+elemSize-1)/elemSize;
     };
 
     template <typename Typ>
     ssize_t read(Typ& data, size_t count=0) const
     {
+        size_t elemSize = sizeof(typename Typ::value_type);
         if (count == 0)
         {
             count = data.size();
@@ -88,7 +91,14 @@ public:
             data.resize(count);
         }
         void* buf = reinterpret_cast<void*>(&data[0]);
-        return read(buf,count*sizeof(typename Typ::value_type));
+        ssize_t ret = 0;
+        ssize_t n = read(buf,count*sizeof(typename Typ::value_type));
+        if (n > 0)
+        {
+            ret = (n+elemSize-1)/elemSize;
+            data.resize(ret);
+        }
+        return ret;
     };
 
     template <typename Typ>
