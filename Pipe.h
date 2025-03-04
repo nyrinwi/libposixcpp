@@ -6,6 +6,7 @@
 namespace posixcpp
 {
 
+// Wrapper for a pair of file descriptors from POSIX pipe()
 class Pipe
 {
 protected:
@@ -16,11 +17,13 @@ public:
     Pipe();
     Pipe(int readFd, int writefd);
 
+    // File object reference for the read end of the pipe
     File& reader()
     {
         return m_reader;
     };
 
+    // File object reference for the write end of the pipe
     File& writer()
     {
         return m_writer;

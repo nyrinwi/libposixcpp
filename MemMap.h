@@ -43,6 +43,7 @@ std::shared_ptr<Typ> memMap(posixcpp::File& file, size_t size, size_t offset=0,M
 
 /*
 ** Note that regardless of the type, the size is always in bytes
+** TODO: should size be in units of Typ objects?
 */
 template <typename Typ>
 class MemMap
