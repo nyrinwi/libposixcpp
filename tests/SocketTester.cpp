@@ -70,81 +70,154 @@ TEST(Socket,getaddrinfo)
 class ClientSocketTester : public ::testing::Test
 {
 public:
-    static const std::string message;
-    FILE* fpNetcat;
+    static const std::string s_message;
+    static const int sinkPort = 5000;
+    static const int sourcePort = 5001;
+    FILE* fpSink;
+    FILE* fpSource;
 
     void SetUp() {
-        fpNetcat = popen("netcat -l localhost 5000 > sink.dat","w");
-        assert(fpNetcat != NULL);
-        fwrite(&message[0],message.size(),1,fpNetcat);
-        fflush(fpNetcat);
+        std::ostringstream oss;
+        oss << "netcat 2>/dev/null -l localhost " << sinkPort;
+
+        fpSink = popen(oss.str().c_str(),"r");
+        assert(fpSink != NULL);
+
+        oss.str("");
+        oss.clear();
+
+        oss << "netcat 2>/dev/null -l localhost " << sourcePort;
+        fpSource = popen(oss.str().c_str(),"w");
+        assert(fpSource != NULL);
+
         usleep(10000);
     };
 
-    std::vector<char> readSink()
+    void writeSource()
+    {
+        assert(fpSource != NULL);
+        fwrite(&s_message[0],s_message.size(),1,fpSource);
+        fflush(fpSource);
+    }
+
+    std::string readSink()
     {
         std::vector<char> ret(256);
-        File sink("sink.dat",O_RDONLY);
-        ssize_t n = sink.read(ret);
+        auto n = fread(&ret[0],1,ret.size(),fpSink);
         assert(n >= 0);
         ret.resize(n);
+        return std::string(&ret[0],n);
+    }
+
+    bool waitForSink()
+    {
+        auto status = pclose(fpSink);
+        fpSink = NULL;
+        bool ret = status == 0;
+        if (not ret)
+        {
+            bool signaled = WIFSIGNALED(status);
+            bool exited = WIFEXITED(status);
+            if (exited)
+            {
+                status = WEXITSTATUS(status);
+            }
+            else if (signaled)
+            {
+                status = -WTERMSIG(status);
+            }
+            else
+            {
+                status = -1;
+            }
+            std::cerr << "warning error from sink "
+                << exited << "," << signaled << " " << status << std::endl;
+        }
         return ret;
     }
 
-    bool waitForNetcat()
-    {
-        auto ret = pclose(fpNetcat);
-        fpNetcat = NULL;
-        return ret == 0;
-    }
-
     void TearDown() {
-        if (fpNetcat)
+        system("pkill -TERM netcat"); // TODO: smarter
+        if (fpSink)
         {
-            waitForNetcat();
+            waitForSink();
         }
-        File file("sink.dat",O_RDWR);
-        file.unlink();
+        if (fpSource)
+        {
+            pclose(fpSource);
+        }
     }
 };
 
-const std::string ClientSocketTester::message = "Hello World";
+const std::string ClientSocketTester::s_message = "Hello World";
 
-TEST_F(ClientSocketTester,basic)
+TEST_F(ClientSocketTester,read)
 {
-    ClientSocket<AF_INET,SOCK_STREAM> client("localhost",5000);
+    // Give the source some data
+    writeSource();
+
+    // Connect to source
+    ClientSocket<AF_INET,SOCK_STREAM> client("localhost",sourcePort);
     ASSERT_NO_THROW(client.connect());
 
+    // Read from source
     std::array<char,256> buf;
-    auto r = client.read(&buf[0],buf.size());
-    ASSERT_GT(r,0);
-    std::string s(&buf[0],r);
-    ASSERT_EQ(s,"Hello World");
+    auto r = client.read(&buf[0],s_message.size());
+    ASSERT_EQ((unsigned)r,s_message.size());
 
-    std::string msg("This is the response");
-    r = client.write(msg);
-    ASSERT_EQ((unsigned)r,msg.size());
-    EXPECT_NO_THROW(client.shutdown(SHUT_WR|SHUT_RD));
-    EXPECT_NO_THROW(client.close());
-    waitForNetcat();
+    // Verify we got s_message
+    std::string resp(&buf[0],r);
+    ASSERT_EQ(resp,s_message);
+}
 
-    std::vector<char> response = readSink();
-    std::string responseStr(&response[0],response.size());
-    ASSERT_EQ(msg,responseStr);
+TEST_F(ClientSocketTester,recv)
+{
+    // Give the source some data
+    writeSource();
+
+    // Connect to source
+    ClientSocket<AF_INET,SOCK_STREAM> client("localhost",sourcePort);
+    ASSERT_NO_THROW(client.connect());
+
+    // Read from source
+    std::array<char,256> buf;
+    auto r = client.recv(&buf[0],s_message.size());
+    ASSERT_EQ((unsigned)r,s_message.size());
+
+    // Verify we got s_message
+    ASSERT_EQ((unsigned)r,s_message.size());
+    client.close();
+}
+
+TEST_F(ClientSocketTester,write)
+{
+    // Connect to sink
+    ClientSocket<AF_INET,SOCK_STREAM> client("localhost",sinkPort);
+    ASSERT_NO_THROW(client.connect());
+
+    // Write to the server
+    auto r = client.write(&s_message[0],s_message.size());
+    ASSERT_EQ(s_message.size(),(unsigned)r);
+
+    client.close();
+
+    auto text = readSink();
+    ASSERT_EQ(s_message,text);
 }
 
 TEST_F(ClientSocketTester,send)
 {
-    ClientSocket<AF_INET,SOCK_STREAM> client("localhost",5000);
+    // Connect to sink
+    ClientSocket<AF_INET,SOCK_STREAM> client("localhost",sinkPort);
     ASSERT_NO_THROW(client.connect());
 
-    std::vector<char> wtf{'w','t','f'};
-    client.send(&wtf[0],wtf.size(),0);
-    EXPECT_NO_THROW(client.shutdown(SHUT_WR|SHUT_RD));
+    // Write to the server
+    auto r = client.send(&s_message[0],s_message.size());
+    ASSERT_EQ(s_message.size(),(unsigned)r);
+
     client.close();
-    waitForNetcat();
-    std::vector<char> response = readSink();
-    ASSERT_FALSE(response.empty());
-    ASSERT_EQ(wtf,response);
+
+    auto text = readSink();
+    ASSERT_EQ(s_message,text);
 }
 

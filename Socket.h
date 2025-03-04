@@ -9,6 +9,7 @@
 #include "File.h"
 #include "PosixError.h"
 
+// A wrapper class for the fd produced from a socket() system call
 namespace posixcpp
 {
 
@@ -17,12 +18,16 @@ typedef std::vector<std::pair<std::string,sockaddr_storage>> gai_vec_t;
 
 class Socket
 {
+    // Manages the file desccriptor
     File m_file;
+
+    // Stores the input parameters
     const int m_domain;
     const int m_type;
     const int m_protocol;
 public:
 
+    // Ref. socket(2)
     Socket(int domain, int type, int protocol=0);
 
     int fd() const {return m_file.fd();};
@@ -35,7 +40,8 @@ public:
     bool shutdown(int how=SHUT_RDWR);
 
     // Returns empty vec if failed, *eaiVal is non-zero if failed
-    gai_vec_t  getaddrinfo(const std::string& host, int *eaiVal=NULL);
+    // If non-NULL eaiVal will store status from getaddrinfo(3)
+    gai_vec_t getaddrinfo(const std::string& host, int *eaiVal=NULL);
 
     ssize_t read(void *buf, size_t len) const
     {
@@ -59,11 +65,18 @@ public:
         return m_file.write(buf,len);
     }
 
-    ssize_t send(const void *buf, size_t len, int flags) const;
-    // sendmsg
+    ssize_t send(const void *buf, size_t len, int flags=0) const;
+    // TODO: sendmsg
 
     ssize_t sendto(const void *buf, size_t len, int flags,
                    const struct sockaddr *dest_addr, socklen_t addrlen);
+
+    ssize_t recv(void *buf, size_t len, int flags=0);
+
+    ssize_t recvfrom(void *buf, size_t len, int flags,
+                     struct sockaddr *src_addr, socklen_t *addrlen);
+
+    // TODO: recvmsg
 
     void close()
     {

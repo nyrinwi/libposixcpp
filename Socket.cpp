@@ -48,6 +48,13 @@ ssize_t Socket::send(const void *buf, size_t len, int flags) const
     return r;
 }
 
+ssize_t Socket::recv(void *buf, size_t len, int flags)
+{
+    ssize_t r = ::recv(fd(),buf,len,flags);
+    PosixError::ASSERT(r != -1);
+    return r;
+}
+
 gai_vec_t Socket::getaddrinfo(const std::string& host, int *eaiVal)
 {
     struct addrinfo hints{0};
