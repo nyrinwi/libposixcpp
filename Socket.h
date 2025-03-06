@@ -43,6 +43,8 @@ public:
     // If non-NULL eaiVal will store status from getaddrinfo(3)
     gai_vec_t getaddrinfo(const std::string& host, int *eaiVal=NULL);
 
+    static gai_vec_t getaddrinfo(const std::string& host, int domain, int *eaiVal=NULL);
+
     ssize_t read(void *buf, size_t len) const
     {
         return m_file.read(buf,len);
@@ -68,9 +70,6 @@ public:
     ssize_t send(const void *buf, size_t len, int flags=0) const;
     // TODO: sendmsg
 
-    ssize_t sendto(const void *buf, size_t len, int flags,
-                   const struct sockaddr *dest_addr, socklen_t addrlen);
-
     ssize_t recv(void *buf, size_t len, int flags=0);
 
     ssize_t recvfrom(void *buf, size_t len, int flags,
@@ -82,6 +81,9 @@ public:
     {
         m_file.close();
     }
+
+    ssize_t sendto(const void *buf, size_t len, int flags,
+                   const struct sockaddr *dest_addr, socklen_t addrlen);
 };
 
 // socket

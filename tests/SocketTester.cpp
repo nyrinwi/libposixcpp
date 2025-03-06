@@ -1,6 +1,7 @@
 #include "Socket.h"
 #include <string>
 #include <gtest/gtest.h>
+#include <netdb.h>
 
 using namespace posixcpp;
 #define INTPAIR(x) x,#x
@@ -67,53 +68,81 @@ TEST(Socket,getaddrinfo)
     ASSERT_NO_THROW(found = Socket(AF_INET,SOCK_DGRAM).getaddrinfo("lalkjasf"));
 }
 
+TEST(Socket,getaddrinfo_static)
+{
+    gai_vec_t found = Socket::getaddrinfo("localhost",AF_INET);
+    ASSERT_EQ(1U,found.size());
+    ASSERT_EQ("127.0.0.1",found[0].first);
+    ASSERT_EQ(AF_INET,found[0].second.ss_family);
+
+    found = Socket::getaddrinfo("::1",AF_INET6);
+    ASSERT_EQ(1U,found.size());
+
+    for (int family : {AF_LOCAL,AF_INET6})
+    {
+        int eaiVal = -1;
+        found = Socket::getaddrinfo("localhost",family,&eaiVal);
+        ASSERT_EQ(0U,found.size());
+        ASSERT_NE(EAI_ADDRFAMILY,eaiVal);
+    }
+}
+
 class ClientSocketTester : public ::testing::Test
 {
 public:
     static const std::string s_message;
     static const int sinkPort = 5000;
     static const int sourcePort = 5001;
-    FILE* fpSink;
-    FILE* fpSource;
+    FILE* fpTcpSink;
+    FILE* fpTcpSource;
+    FILE* fpUdpSink;
+    FILE* fpUdpSource;
+
+    enum NetcatType {UDP,TCP};
+
+    FILE* netcat(const NetcatType& nc, int port, const char* rw)
+    {
+        std::ostringstream oss;
+        oss << "netcat -q 1 -w 1 2>/dev/null -l localhost " << ((nc==UDP)?"-u":"") << " " << port;
+        FILE* ret = popen(oss.str().c_str(),rw);
+        assert(ret != NULL);
+        return ret;
+    }
 
     void SetUp() {
-        std::ostringstream oss;
-        oss << "netcat 2>/dev/null -l localhost " << sinkPort;
-
-        fpSink = popen(oss.str().c_str(),"r");
-        assert(fpSink != NULL);
-
-        oss.str("");
-        oss.clear();
-
-        oss << "netcat 2>/dev/null -l localhost " << sourcePort;
-        fpSource = popen(oss.str().c_str(),"w");
-        assert(fpSource != NULL);
-
+        fpTcpSink = netcat(TCP,sinkPort,"r");
+        fpTcpSource = netcat(TCP,sourcePort,"w");
+        fpUdpSink = netcat(UDP,sinkPort,"r");
+        fpUdpSource = netcat(UDP,sourcePort,"w");
         usleep(10000);
     };
 
     void writeSource()
     {
-        assert(fpSource != NULL);
-        fwrite(&s_message[0],s_message.size(),1,fpSource);
-        fflush(fpSource);
+        assert(fpTcpSource != NULL);
+        auto n = fwrite(&s_message[0],1,s_message.size(),fpTcpSource);
+        assert(n>=0);
+        fflush(fpTcpSource);
     }
 
-    std::string readSink()
+    std::string readSink(FILE* fp)
     {
         std::vector<char> ret(256);
-        auto n = fread(&ret[0],1,ret.size(),fpSink);
+        auto n = fread(&ret[0],1,ret.size(),fp);
         assert(n >= 0);
         ret.resize(n);
         return std::string(&ret[0],n);
     }
 
-    bool waitForSink()
+    bool waitForSink(FILE* &fp)
     {
-        auto status = pclose(fpSink);
-        fpSink = NULL;
-        bool ret = status == 0;
+        if (fp == NULL)
+        {
+            return true;
+        }
+        int status = pclose(fp);
+        fp = NULL;
+        bool ret = (status == 0);
         if (not ret)
         {
             bool signaled = WIFSIGNALED(status);
@@ -130,21 +159,22 @@ public:
             {
                 status = -1;
             }
-            std::cerr << "warning error from sink "
-                << exited << "," << signaled << " " << status << std::endl;
+            //std::cerr << "warning error from sink "
+            //    << "e:" << exited << "," << "s:" << signaled << " " << status << std::endl;
         }
         return ret;
     }
 
     void TearDown() {
-        system("pkill -TERM netcat"); // TODO: smarter
-        if (fpSink)
+        system("pkill -INT netcat"); // TODO: smarter
+        waitForSink(fpTcpSink);
+        waitForSink(fpUdpSink);
+        for (auto fp : {fpTcpSink,fpUdpSink})
         {
-            waitForSink();
-        }
-        if (fpSource)
-        {
-            pclose(fpSource);
+            if (fp)
+            {
+                pclose(fp);
+            }
         }
     }
 };
@@ -201,7 +231,7 @@ TEST_F(ClientSocketTester,write)
 
     client.close();
 
-    auto text = readSink();
+    auto text = readSink(fpTcpSink);
     ASSERT_EQ(s_message,text);
 }
 
@@ -217,7 +247,7 @@ TEST_F(ClientSocketTester,send)
 
     client.close();
 
-    auto text = readSink();
+    auto text = readSink(fpTcpSink);
     ASSERT_EQ(s_message,text);
 }
 

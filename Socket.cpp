@@ -105,3 +105,13 @@ gai_vec_t Socket::getaddrinfo(const std::string& host, int *eaiVal)
     return ret;
 }
 
+gai_vec_t Socket::getaddrinfo(const std::string& host, int domain, int *eaiVal)
+{
+    return Socket(domain, SOCK_STREAM).getaddrinfo(host,eaiVal);
+}
+
+ssize_t Socket::sendto(const void *buf, size_t len, int flags,
+                   const struct sockaddr *dest_addr, socklen_t addrlen)
+{
+    return ::sendto(fd(),buf,len,flags,dest_addr,addrlen);
+}
