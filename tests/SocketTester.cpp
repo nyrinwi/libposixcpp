@@ -100,20 +100,34 @@ public:
 
     enum NetcatType {UDP,TCP};
 
-    FILE* netcat(const NetcatType& nc, int port, const char* rw)
+    FILE* socat(const NetcatType& nc, int port, bool isSource)
     {
+        std::string protocol = (nc==UDP) ? "UDP" : "TCP";
         std::ostringstream oss;
-        oss << "netcat -q 1 -w 1 2>/dev/null -l localhost " << ((nc==UDP)?"-u":"") << " " << port;
-        FILE* ret = popen(oss.str().c_str(),rw);
-        assert(ret != NULL);
+        oss << "socat ";
+        if (isSource)
+        {
+            oss << "STDIN " << protocol << "-LISTEN:" << port;
+        }
+        else
+        {
+            oss << protocol << "-LISTEN:" << port << " STDOUT";
+        }
+        FILE* ret = popen(oss.str().c_str(),(isSource)?"w":"r");
+        if (ret == NULL)
+        {
+            oss << " flag " << ((isSource)?"w":"b");
+            throw std::runtime_error(oss.str());
+        }
         return ret;
     }
 
+    //FILE* socat(const NetcatType& nc, int port, bool isSource)
     void SetUp() {
-        fpTcpSink = netcat(TCP,sinkPort,"r");
-        fpTcpSource = netcat(TCP,sourcePort,"w");
-        fpUdpSink = netcat(UDP,sinkPort,"r");
-        fpUdpSource = netcat(UDP,sourcePort,"w");
+        fpTcpSink   = socat(TCP,sinkPort,false);
+        fpTcpSource = socat(TCP,sourcePort,true);
+        fpUdpSink   = socat(UDP,sinkPort,false);
+        fpUdpSource = socat(UDP,sourcePort,true);
         usleep(10000);
     };
 
@@ -166,7 +180,7 @@ public:
     }
 
     void TearDown() {
-        system("pkill -INT netcat"); // TODO: smarter
+        system("pkill -INT socat"); // TODO: smarter
         waitForSink(fpTcpSink);
         waitForSink(fpUdpSink);
         for (auto fp : {fpTcpSink,fpUdpSink})
