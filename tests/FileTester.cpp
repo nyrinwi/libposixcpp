@@ -134,6 +134,14 @@ TEST_F(FileTester,withFd)
     ASSERT_EQ(msg,recvBuf);
 }
 
+TEST_F(FileTester,read_template)
+{
+    std::vector<char> recvBuf(100);
+    File reader("/dev/zero");
+    auto size = reader.read(recvBuf);
+    ASSERT_EQ(recvBuf.size(),(unsigned)size);
+}
+
 TEST_F(FileTester,lseek)
 {
     int seekLoc = 128;

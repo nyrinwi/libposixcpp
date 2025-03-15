@@ -183,7 +183,7 @@ public:
         system("pkill -INT socat"); // TODO: smarter
         waitForSink(fpTcpSink);
         waitForSink(fpUdpSink);
-        for (auto fp : {fpTcpSink,fpUdpSink})
+        for (auto fp : {fpTcpSink,fpUdpSink,fpTcpSource,fpUdpSource})
         {
             if (fp)
             {
@@ -195,6 +195,8 @@ public:
 
 const std::string ClientSocketTester::s_message = "Hello World";
 
+const int ClientSocketTester::sourcePort;
+
 TEST_F(ClientSocketTester,read)
 {
     // Give the source some data
@@ -202,7 +204,7 @@ TEST_F(ClientSocketTester,read)
 
     // Connect to source
     ClientSocket<AF_INET,SOCK_STREAM> client("localhost",sourcePort);
-    ASSERT_NO_THROW(client.connect());
+    ASSERT_NO_THROW(client.connect()) << "failed to connect TCP to " << sourcePort;
 
     // Read from source
     std::array<char,256> buf;
@@ -263,5 +265,19 @@ TEST_F(ClientSocketTester,send)
 
     auto text = readSink(fpTcpSink);
     ASSERT_EQ(s_message,text);
+}
+
+TEST_F(ClientSocketTester,sendto)
+{
+    Socket sock(AF_INET,SOCK_DGRAM);
+    auto found = sock.getaddrinfo("localhost");
+    ASSERT_EQ(1U,found.size());
+
+    auto sa = reinterpret_cast<sockaddr*>(&found[0].second);
+    auto sai = reinterpret_cast<sockaddr_in*>(&found[0].second);
+    sai->sin_port = htons(sinkPort);
+
+    auto r = sock.sendto(&s_message[0],s_message.size(),0, sa, sizeof(*sai));
+    ASSERT_EQ(s_message.size(),(unsigned)r) << strerror(errno) << " fd=" << sock.fd();
 }
 
