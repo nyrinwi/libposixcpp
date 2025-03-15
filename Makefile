@@ -45,8 +45,12 @@ coverage:
 	make test
 	make html
 
+.PHONY:  docs
+docs:
+	doxygen
+
 clean::
-	rm -rf File *.o tester *.a bytes html coverage.info *.gcda *.gcno
+	rm -rf File *.o tester *.a bytes html coverage.info *.gcda *.gcno docs
 	make -C tests clean
 
 depends:

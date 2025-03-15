@@ -105,7 +105,7 @@ ssize_t File::write(const void *buf, size_t count) const
     return ret;
 }
 
-int File::close()
+int File::close() noexcept
 {
     int fd = m_fd;
     if (fd == -1)

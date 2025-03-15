@@ -10,6 +10,10 @@
 namespace posixcpp
 {
 
+/*
+** A class wrapper for POSIX file related functions
+** All functions and constructors throw PosixError on error, except where specified
+*/
 class File
 {
 protected:
@@ -26,58 +30,84 @@ public:
 
     File() noexcept;
 
+    /// Calls open() on the given filename. Throws PosixError if open returns -1.
     File(const std::string& filename, int posixFlags=O_RDONLY, int perm=PERM_GRWX);
 
+    /// Calls fcntl(F_GETFL) on the fd and throws PosixError if fcntl returns -1.
+    /// Destructor will call close() on the input file descriptor
     File(int fd, const std::string& filename="unnamed");
+
+    // TODO: make dup available?
 
     File(const File& other) noexcept;     // copy
     File& operator=(const File& other) noexcept; // copy
-
 
     File(File&& other) noexcept;    // move
     File& operator=(File&& other) noexcept; // move
 
     virtual ~File();
 
+    /// Returns the filename given in the constructor
     std::string filename() const {return m_filename;};
 
+    /// Returns the one and only file descriptor associated with this object
     int fd() const {return m_fd;};
 
+    /// Returns the mode flags (RWX) assocated with the file descriptor
     int mode() const {return m_mode;};
 
+    /// Returns true if the objects file descriptor is valid
     bool fdValid() const;
 
-    // Requires a stat() call, does not update fstat
+    /// Requires a stat(2) call, does not update fstat
     bool exists() const;
 
+    /// Wrapper for read(2)
     ssize_t read(void *buf, size_t count) const;
 
+    /// Wrapper for write(2)
     ssize_t write(const void *buf, size_t count) const;
 
-    int close();
+    /// Wrapper for close(2). DOES NOT THROW
+    int close() noexcept;
 
+    /// Wrapper for lseek(2)
     off_t lseek(off_t offset, int whence=SEEK_SET) const;
     
+    /// Wrapper for ftruncate(2)
     void ftruncate(off_t length);
 
+    /// Wrapper for fsync(2)
     void fsync();
 
+    /// Wrapper for fdatasync(2)
     void fdatasync();
 
+    /// Wrapper for unlink(2). Does not throw if errno == ENOENT
     void unlink();
 
+    /// Wrapper for remove(3). Does not throw if errno == ENOENT
     void remove();
 
+    /**
+     ** The underlying fstat call occurs on the first call to fstat
+     ** and is never called again over the life of the object.
+     */
+    /// Returns a cached value of fstat on the given fd. Use force=true to refresh the cached value
     struct stat fstat(bool force=false);
 
+    /// Wrapper for mkstemp(3)
     static File mkstemp(const std::string& templ);
 
+    /// Wrapper for creat(2)
     static File creat(const std::string& path, mode_t mode);
 
+    /// Wrapper for mkdir(2)
     static File mkdir(const std::string& pathname, mode_t mode);
 
     // TODO: fcntl
 
+    /// \todo write me
     template <typename Typ>
     ssize_t write(const Typ& data) const
     {
@@ -87,6 +117,7 @@ public:
         return (n+elemSize-1)/elemSize;
     };
 
+    /// \todo write me
     template <typename Typ>
     ssize_t read(Typ& data, size_t count=0) const
     {
@@ -110,6 +141,7 @@ public:
         return ret;
     };
 
+    /// \todo write me
     template <typename Typ>
     ssize_t readArray(Typ& data) const
     {
