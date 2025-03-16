@@ -107,7 +107,7 @@ public:
 
     // TODO: fcntl
 
-    /// \todo write me
+    /// Write using a std::vector or std::string
     template <typename Typ>
     ssize_t write(const Typ& data) const
     {
@@ -117,7 +117,7 @@ public:
         return (n+elemSize-1)/elemSize;
     };
 
-    /// \todo write me
+    /// Read using a std::vector or std::string
     template <typename Typ>
     ssize_t read(Typ& data, size_t count=0) const
     {
@@ -141,7 +141,7 @@ public:
         return ret;
     };
 
-    /// \todo write me
+    // Read into a std::array
     template <typename Typ>
     ssize_t readArray(Typ& data) const
     {
