@@ -218,3 +218,9 @@ File File::mkdir(const std::string& path, mode_t mode)
     PosixError::ASSERT(r!=-1,"mkdir");
     return File(path,O_RDONLY);
 }
+
+size_t File::getSize(bool useCached)
+{
+    auto stat = fstat(not useCached);
+    return stat.st_size;
+}

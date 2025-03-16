@@ -37,7 +37,7 @@ public:
     /// Destructor will call close() on the input file descriptor
     File(int fd, const std::string& filename="unnamed");
 
-    // TODO: make dup available?
+    // \todo make dup available?
 
     File(const File& other) noexcept;     // copy
     File& operator=(const File& other) noexcept; // copy
@@ -105,7 +105,7 @@ public:
     /// Wrapper for mkdir(2)
     static File mkdir(const std::string& pathname, mode_t mode);
 
-    // TODO: fcntl
+    // \todo fcntl
 
     /// Write using a std::vector or std::string
     template <typename Typ>
@@ -148,6 +148,9 @@ public:
         void* buf = reinterpret_cast<void*>(&data[0]);
         return read(buf,data.size()*sizeof(typename Typ::value_type));
     };
+
+    /// Return the size of the file as reported by fstat()
+    size_t getSize(bool useCached=true);
 };
 
 };

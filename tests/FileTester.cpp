@@ -1,5 +1,6 @@
 #include <fstream>
 #include <array>
+#include <map>
 #include "File.h"
 #include "PosixError.h"
 #include <gtest/gtest.h>
@@ -15,6 +16,7 @@ class FileTester : public ::testing::Test
 public:
     std::string m_filename;
     std::string m_dirname;
+    static constexpr size_t c_fileSize = 256;
     
     int readFd() {return fds[0];};
     int writeFd() {return fds[1];};
@@ -33,8 +35,8 @@ public:
         // Fill m_filename file with sequential bytes
         m_filename = "test.dat";
         m_dirname = "test.dir";
-        std::array<uint8_t,256> bytes;
-        for(int i=0; i<256; i++)
+        std::array<uint8_t,c_fileSize> bytes;
+        for(unsigned i=0; i<c_fileSize; i++)
         {
             bytes[i] = i;
         }
@@ -318,3 +320,40 @@ TEST_F(FileTester,strings)
     ASSERT_EQ(msg,std::string(response.begin(),response.end()));
     ASSERT_EQ(msg,response);
 }
+
+TEST_F(FileTester,std_string)
+{
+    std::string buf{__PRETTY_FUNCTION__};
+    File file(m_filename,O_RDWR|O_TRUNC);
+    file.write(buf);
+    file.close();
+
+
+    // \todo more tests, ditto for std::vector
+
+    std::string readback;
+    file = File(m_filename,O_RDONLY);
+    file.read(readback,buf.size());
+    ASSERT_EQ(buf,readback);
+}
+
+TEST_F(FileTester,getSize)
+{
+    File file(m_filename);
+    ASSERT_EQ(c_fileSize,file.getSize());
+
+    // Truncate the file
+    File(m_filename,O_WRONLY|O_TRUNC);
+    ASSERT_EQ(c_fileSize,file.getSize()) << "default should be to use cached value";
+    ASSERT_EQ(c_fileSize,file.getSize(true)) << "true should be the default";
+    ASSERT_EQ(0U,file.getSize(false)) << "did not use cached value";
+
+    // Use a pipe() which should have zero size
+    int fds[2];
+    ASSERT_EQ(0,pipe(fds));
+    File readFd(fds[0]);
+    File writeFd(fds[1]);
+    ASSERT_EQ(0U,readFd.getSize());
+    ASSERT_EQ(0U,writeFd.getSize());
+}
+
