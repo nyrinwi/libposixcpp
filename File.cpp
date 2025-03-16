@@ -183,6 +183,11 @@ struct stat File::fstat(bool force)
     return *m_stat;
 }
 
+struct stat File::fstat() const
+{
+    return *m_stat;
+}
+
 bool File::fdValid() const
 {
     int r = ::fcntl(m_fd,F_GETFL);
@@ -223,4 +228,51 @@ size_t File::getSize(bool useCached)
 {
     auto stat = fstat(not useCached);
     return stat.st_size;
+}
+
+bool File::is_block_device() const
+{
+    return S_ISBLK((*m_stat).st_mode);
+}
+
+bool File::is_char_device() const
+{
+    return S_ISCHR((*m_stat).st_mode);
+}
+
+bool File::is_dir() const
+{
+    return S_ISDIR((*m_stat).st_mode);
+}
+
+bool File::is_fifo() const
+{
+    return S_ISFIFO((*m_stat).st_mode);
+}
+
+bool File::is_file() const
+{
+    return S_ISREG((*m_stat).st_mode);
+}
+
+// \todo - is_mount needs work
+#if 0
+bool File::is_mount() const
+{
+    if (not S_ISDIR((*m_stat).st_mode))
+    {
+        return false;
+    }
+    auto dev = (*m_stat).st_dev;
+}
+#endif
+
+bool File::is_socket() const
+{
+    return S_ISSOCK((*m_stat).st_mode);
+}
+
+bool File::is_symlink() const
+{
+    return S_ISLNK((*m_stat).st_mode);
 }

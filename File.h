@@ -96,6 +96,8 @@ public:
     /// Returns a cached value of fstat on the given fd. Use force=true to refresh the cached value
     struct stat fstat(bool force=false);
 
+    struct stat fstat() const;
+
     /// Wrapper for mkstemp(3)
     static File mkstemp(const std::string& templ);
 
@@ -151,6 +153,30 @@ public:
 
     /// Return the size of the file as reported by fstat()
     size_t getSize(bool useCached=true);
+
+    /// Return true if fd is a block device. Uses cached fstat
+    bool is_block_device() const;
+
+    /// Return true if fd is a char device. Uses cached fstat
+    bool is_char_device() const;
+
+    /// Return true if fd is a directory. Uses cached fstat
+    bool is_dir() const;
+
+    /// Return true if fd is a FIFO. Uses cached fstat
+    bool is_fifo() const;
+
+    /// Return true if fd is a regular file. Uses cached fstat
+    bool is_file() const;
+
+    /// Return true if fd is a mount point. Uses cached fstat
+    bool is_mount() const;
+
+    /// Return true if fd is a socket. Uses cached fstat
+    bool is_socket() const;
+
+    /// Return true if fd is a symbolic link. Uses cached fstat
+    bool is_symlink() const;
 };
 
 };
