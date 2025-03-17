@@ -34,7 +34,7 @@ test:
 	rm -f $(SINK)
 	./tester 
 
-tester:: $(TESTOBJS)
+tester:: $(TESTOBJS) ../libposixcpp.a
 	$(CXX) -o $@ $(TESTOBJS) -L$(CURDIR)/.. -L. $(ASAN) -l posixcpp $(LDLIBS)
 
 coverage:
