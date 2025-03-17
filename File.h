@@ -117,7 +117,7 @@ public:
     /// Wrapper for getcwd(3)
     static std::string getcwd();
 
-    /// Remove duplicate slashes and trailing slashes
+    /// Remove duplicate slashes and trailing slashes. Return path start with '/' or './'
     static std::string normalizePath(const std::string& path);
 
     // \todo fcntl
@@ -164,6 +164,11 @@ public:
         return read(buf,data.size()*sizeof(typename Typ::value_type));
     };
 
+    /// Returns true if a valid path was provided in the constructor. This does not indicate the current state.
+    bool pathValidated() const {
+        return m_fromFilename;
+    };
+
     /// Return the size of the file as reported by fstat()
     size_t getSize(bool useCached=true);
 
@@ -193,6 +198,8 @@ public:
 };
 
 };
+
+std::ostream& operator<<(std::ostream& os, const posixcpp::File& file);
 
 #endif
 

@@ -261,11 +261,15 @@ std::string File::normalizePath(const std::string& path)
         {
             if (tok.empty())
             {
-                oss << '/';
+                oss << "/";
+            }
+            else if (tok == ".")
+            {
+                oss << ".";
             }
             else
             {
-                oss << tok;
+                oss << "./" << tok;
             }
         }
         else if (tok.empty())
@@ -274,7 +278,11 @@ std::string File::normalizePath(const std::string& path)
         }
         else
         {
-            oss << '/' << tok;
+            if (oss.str().back()!='/')
+            {
+                oss << '/';
+            }
+            oss << tok;
         }
     }
     return oss.str();
@@ -350,6 +358,33 @@ File File::parent() const
     {
         throw PosixError("fd has no parent()",EINVAL);
     }
-    /// \todo implement parent()
-    throw PosixError("not implemented",EINVAL);
+
+    std::string path;
+
+    size_t n = m_filename.find_last_of("/");
+    File ret;
+    if (n == std::string::npos)
+    {
+        /// Special case - path == "."
+        ret = File(File::getcwd(),O_RDONLY).parent();
+    }
+    else
+    {
+        ret = File(m_filename.substr(0,n),O_RDONLY);
+    }
+    return ret;
+}
+
+std::ostream& operator<<(std::ostream& os, const File& file)
+{
+    os << "File(";
+    if (file.pathValidated())
+    {
+        os << "\"" << file.filename() << "\")";
+    }
+    else
+    {
+        os << "\"" << file.fd() << "\")";
+    }
+    return os;
 }

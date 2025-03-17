@@ -285,16 +285,27 @@ TEST_F(FileTester,getcwd)
 
 TEST_F(FileTester,normalizePath)
 {
+    EXPECT_EQ(File::normalizePath(""),"");
+
     ASSERT_EQ(File::normalizePath("./"),".");
-    ASSERT_EQ(File::normalizePath(""),"");
-    ASSERT_EQ(File::normalizePath("/"),"/");
-    ASSERT_EQ(File::normalizePath("a"),"a");
-    ASSERT_EQ(File::normalizePath("a/"),"a");
-    ASSERT_EQ(File::normalizePath("a//"),"a");
-    ASSERT_EQ(File::normalizePath("a/b"),"a/b");
-    ASSERT_EQ(File::normalizePath("a//b"),"a/b");
-    ASSERT_EQ(File::normalizePath("a//b/"),"a/b");
-    ASSERT_EQ(File::normalizePath("a/./b/"),"a/./b");
+    ASSERT_EQ(File::normalizePath(".."),"./..");
+    ASSERT_EQ(File::normalizePath("../"),"./..");
+    ASSERT_EQ(File::normalizePath(".//"),".");
+    EXPECT_EQ(File::normalizePath("a"),"./a");
+    EXPECT_EQ(File::normalizePath("a/"),"./a");
+    EXPECT_EQ(File::normalizePath("a//"),"./a");
+    EXPECT_EQ(File::normalizePath("a/b"),"./a/b");
+    EXPECT_EQ(File::normalizePath("a//b"),"./a/b");
+    EXPECT_EQ(File::normalizePath("a//b/"),"./a/b");
+    EXPECT_EQ(File::normalizePath("a/./b/"),"./a/./b");
+
+    EXPECT_EQ(File::normalizePath("/"),"/");
+    EXPECT_EQ(File::normalizePath("//"),"/");
+    EXPECT_EQ(File::normalizePath("///"),"/");
+    EXPECT_EQ(File::normalizePath("/a"),"/a");
+    EXPECT_EQ(File::normalizePath("//a"),"/a");
+    EXPECT_EQ(File::normalizePath("/a/"),"/a");
+    EXPECT_EQ(File::normalizePath("//a/b"),"/a/b");
 }
 
 TEST_F(FileTester,stat)
@@ -474,4 +485,16 @@ TEST_F(FileTester,is_symlink)
     EXPECT_TRUE(file.is_fifo()) << whatIsIt(file);
     ASSERT_TRUE(file.is_symlink()) << whatIsIt(file);
     testMutuallyExlusiveIsMethods(file);
+}
+
+TEST_F(FileTester,parent)
+{
+    File parent = File(m_filename).parent().filename();
+    ASSERT_EQ(".",parent.filename()) << parent;
+
+    std::string cwd = File::getcwd();
+
+    parent = parent.parent();
+    ASSERT_NE(".",parent.filename()) << parent;
+    ASSERT_EQ(0U,cwd.find(parent.filename())) << parent;
 }
