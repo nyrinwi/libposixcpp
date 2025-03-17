@@ -1,10 +1,11 @@
 #include <fstream>
 #include <array>
-#include <map>
+#include <functional>
 #include "File.h"
 #include "PosixError.h"
 #include <gtest/gtest.h>
 #include <sys/resource.h>
+#include <sys/socket.h>
 
 using namespace posixcpp;
 
@@ -65,7 +66,7 @@ public:
             }
             catch(const PosixError& e)
             {
-                if (e.errnoVal() != ENOENT)
+                if (e.errnoVal() != ENOENT && e.errnoVal() != EBADF)
                 {
                     FAIL() << e.what();
                 }
@@ -76,7 +77,52 @@ public:
             EXPECT_EQ(-1,::fcntl(fd,F_GETFL)) << "fd: " << fd;
         }
     };
+
+    void testMutuallyExlusiveIsMethods(const File &file);
 };
+
+/// Verify all mutually exclusive is_xyz() methods are mutually exlusive
+void FileTester::testMutuallyExlusiveIsMethods(const File &file)
+{
+    std::vector<bool> values;
+    values.push_back(std::bind(&File::is_block_device,&file)());
+    values.push_back(std::bind(&File::is_char_device,&file)());
+    values.push_back(std::bind(&File::is_dir,&file)());
+    values.push_back(std::bind(&File::is_fifo,&file)());
+    values.push_back(std::bind(&File::is_file,&file)());
+    values.push_back(std::bind(&File::is_socket,&file)());
+    // values.push_back(std::bind(&File::is_symlink,&file)());
+    unsigned count = std::count(values.begin(),values.end(),true);
+    ASSERT_EQ(1U,count);
+}
+
+std::string whatIsIt(File& file)
+{
+    std::map<const char*,std::function<bool()>> methods {
+        {"is_block_device",std::bind(&File::is_block_device,&file)},
+        {"is_char_device",std::bind(&File::is_char_device,&file)},
+        {"is_dir",std::bind(&File::is_dir,&file)},
+        {"is_fifo",std::bind(&File::is_fifo,&file)},
+        {"is_file",std::bind(&File::is_file,&file)},
+        {"is_socket",std::bind(&File::is_socket,&file)},
+        {"is_symlink",std::bind(&File::is_symlink,&file)},
+    };
+    std::ostringstream oss;
+    for (auto pair : methods)
+    {
+        if (not pair.second())
+        {
+            continue;
+        }
+
+        if (not oss.str().empty())
+        {
+            oss << ",";
+        }
+        oss << pair.first;
+    }
+    return oss.str();
+}
 
 TEST_F(FileTester,basic)
 {
@@ -357,3 +403,54 @@ TEST_F(FileTester,getSize)
     ASSERT_EQ(0U,writeFd.getSize());
 }
 
+TEST_F(FileTester,is_file)
+{
+    auto file = File(m_filename,O_RDONLY);
+    EXPECT_TRUE(file.is_file());
+    testMutuallyExlusiveIsMethods(file);
+}
+
+TEST_F(FileTester,is_socket)
+{
+    auto file = File(socket(AF_INET,SOCK_STREAM,0));
+    EXPECT_TRUE(file.is_socket());
+    testMutuallyExlusiveIsMethods(file);
+}
+
+TEST_F(FileTester,is_fifo)
+{
+    int fds[2];
+    ASSERT_EQ(0,pipe(fds));
+    auto file = File(fds[0]);
+    EXPECT_TRUE(file.is_fifo());
+    testMutuallyExlusiveIsMethods(file);
+
+    file = File(fds[1]);
+    EXPECT_TRUE(file.is_fifo());
+    testMutuallyExlusiveIsMethods(file);
+
+}
+
+// \todo TEST_F(FileTester,is_block_device)
+
+TEST_F(FileTester,is_char_device)
+{
+    auto file = File("/dev/null",O_RDONLY);
+    EXPECT_TRUE(file.is_char_device());
+    testMutuallyExlusiveIsMethods(file);
+}
+
+TEST_F(FileTester,is_dir)
+{
+    auto file = File(".",O_RDONLY);
+    EXPECT_TRUE(file.is_dir());
+    testMutuallyExlusiveIsMethods(file);
+}
+
+TEST_F(FileTester,is_symlink)
+{
+    auto file = File("/dev/stdout",O_RDONLY);
+    EXPECT_TRUE(file.is_fifo()) << whatIsIt(file);
+    ASSERT_TRUE(file.is_symlink()) << whatIsIt(file);
+    testMutuallyExlusiveIsMethods(file);
+}

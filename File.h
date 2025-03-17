@@ -21,6 +21,7 @@ protected:
     mutable int m_fd;
     mutable int m_mode;
     std::optional<struct stat> m_stat;
+    bool m_fromFilename; // true if constructed from filename
 
     // These are the only bits preserved by the File() object
     static const int MODE_MASK = O_RDONLY|O_RDWR|O_WRONLY;
@@ -91,12 +92,15 @@ public:
 
     /**
      ** The underlying fstat call occurs on the first call to fstat
-     ** and is never called again over the life of the object.
+     ** and is never called again over the life of the object unless forced
      */
     /// Returns a cached value of fstat on the given fd. Use force=true to refresh the cached value
     struct stat fstat(bool force=false);
 
+    /// Const version of fstat (no force allowed)
     struct stat fstat() const;
+
+    /// \todo add lstat()
 
     /// Wrapper for mkstemp(3)
     static File mkstemp(const std::string& templ);

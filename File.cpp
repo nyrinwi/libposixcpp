@@ -16,26 +16,31 @@ using namespace posixcpp;
 
 File::File(const std::string& filename, int posixFlags, int mode)
 : m_filename(filename),
-  m_fd(open(filename.c_str(),posixFlags,mode))
+  m_fd(open(filename.c_str(),posixFlags,mode)),
+  m_fromFilename(true)
 {
     if (m_fd == -1)
     {
         throw PosixError(filename);
     }
+    fstat();
     m_mode = ::fcntl(m_fd,F_GETFL)&MODE_MASK;
 }
 
 File::File(int fd, const std::string& filename)
 : m_filename(filename),
   m_fd(fd),
-  m_mode(::fcntl(m_fd,F_GETFL)&MODE_MASK)
+  m_mode(::fcntl(m_fd,F_GETFL)&MODE_MASK),
+  m_stat(fstat(true)),
+  m_fromFilename(false)
 {
     PosixError::ASSERT(fd >= 0,"File(fd)");
 }
 
 File::File() noexcept
 : m_fd(-1),
-  m_mode(0)
+  m_mode(0),
+  m_fromFilename(false)
 {
 }
 
@@ -61,13 +66,15 @@ File& File::operator=(const File& other) noexcept // copy
     m_filename = other.m_filename;
     m_fd = other.m_fd;
     m_mode = ::fcntl(m_fd,F_GETFL)&MODE_MASK;
+    m_fromFilename = other.m_fromFilename;
     return *this;
 }
 
 File::File(File&& other) noexcept // move
 : m_filename(other.m_filename),
   m_fd(other.m_fd),
-  m_mode(::fcntl(m_fd,F_GETFL)&MODE_MASK)
+  m_mode(::fcntl(m_fd,F_GETFL)&MODE_MASK),
+  m_fromFilename(other.m_fromFilename)
 {
     other.m_fd = -1;
     other.m_filename.clear();
@@ -85,6 +92,7 @@ File& File::operator=(File&& other) noexcept // move
     m_filename = other.m_filename;
     m_fd = other.m_fd;
     m_mode = ::fcntl(m_fd,F_GETFL)&MODE_MASK;
+    m_fromFilename = other.m_fromFilename;
     other.m_fd = -1;
     other.m_filename.clear();
     other.m_mode = 0;
@@ -274,5 +282,16 @@ bool File::is_socket() const
 
 bool File::is_symlink() const
 {
-    return S_ISLNK((*m_stat).st_mode);
+    // Note that an open file descriptor cannot be a symlink, so we must use the path
+    if (not m_fromFilename)
+    {
+        return false;
+    }
+    struct stat sbuf;
+    int r = lstat(m_filename.c_str(),&sbuf);
+    if (r == -1)
+    {
+        return false;
+    }
+    return S_ISLNK(sbuf.st_mode);
 }
