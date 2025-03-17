@@ -48,6 +48,9 @@ public:
 
     virtual ~File();
 
+    // Return the parent of this object - throws if not constructed from a path
+    File parent() const;
+
     /// Returns the filename given in the constructor
     std::string filename() const {return m_filename;};
 
@@ -110,6 +113,12 @@ public:
 
     /// Wrapper for mkdir(2)
     static File mkdir(const std::string& pathname, mode_t mode);
+
+    /// Wrapper for getcwd(3)
+    static std::string getcwd();
+
+    /// Remove duplicate slashes and trailing slashes
+    static std::string normalizePath(const std::string& path);
 
     // \todo fcntl
 

@@ -3,6 +3,7 @@
 #include <sys/errno.h>
 #include <sys/stat.h>
 #include <cstring>
+#include <climits>
 #include <array>
 #include <vector>
 #include <string>
@@ -15,7 +16,7 @@
 using namespace posixcpp;
 
 File::File(const std::string& filename, int posixFlags, int mode)
-: m_filename(filename),
+: m_filename(normalizePath(filename)),
   m_fd(open(filename.c_str(),posixFlags,mode)),
   m_fromFilename(true)
 {
@@ -28,7 +29,7 @@ File::File(const std::string& filename, int posixFlags, int mode)
 }
 
 File::File(int fd, const std::string& filename)
-: m_filename(filename),
+: m_filename(normalizePath(filename)),
   m_fd(fd),
   m_mode(::fcntl(m_fd,F_GETFL)&MODE_MASK),
   m_stat(fstat(true)),
@@ -232,6 +233,53 @@ File File::mkdir(const std::string& path, mode_t mode)
     return File(path,O_RDONLY);
 }
 
+std::string File::getcwd()
+{
+    char path[PATH_MAX+1];
+    char* retPtr = ::getcwd(&path[0],PATH_MAX);
+    PosixError::ASSERT(retPtr!=NULL,"getcwd");
+    return retPtr;
+}
+
+std::string File::normalizePath(const std::string& path)
+{
+    if (path.empty())
+    {
+        return "";
+    }
+    std::istringstream iss(path);
+    std::ostringstream oss;
+    while (iss)
+    {
+        std::string tok;
+        if (iss.eof())
+        {
+            break;
+        }
+        getline(iss,tok,'/');
+        if (oss.str().empty())
+        {
+            if (tok.empty())
+            {
+                oss << '/';
+            }
+            else
+            {
+                oss << tok;
+            }
+        }
+        else if (tok.empty())
+        {
+            continue;
+        }
+        else
+        {
+            oss << '/' << tok;
+        }
+    }
+    return oss.str();
+}
+
 size_t File::getSize(bool useCached)
 {
     auto stat = fstat(not useCached);
@@ -294,4 +342,14 @@ bool File::is_symlink() const
         return false;
     }
     return S_ISLNK(sbuf.st_mode);
+}
+
+File File::parent() const
+{
+    if (not m_fromFilename)
+    {
+        throw PosixError("fd has no parent()",EINVAL);
+    }
+    /// \todo implement parent()
+    throw PosixError("not implemented",EINVAL);
 }

@@ -276,6 +276,27 @@ TEST_F(FileTester,mkdir)
     EXPECT_NO_THROW(dir.remove());
 }
 
+TEST_F(FileTester,getcwd)
+{
+    std::string cwd;
+    ASSERT_NO_THROW(cwd = File::getcwd());
+    ASSERT_TRUE(cwd[0] = '/') << cwd;
+}
+
+TEST_F(FileTester,normalizePath)
+{
+    ASSERT_EQ(File::normalizePath("./"),".");
+    ASSERT_EQ(File::normalizePath(""),"");
+    ASSERT_EQ(File::normalizePath("/"),"/");
+    ASSERT_EQ(File::normalizePath("a"),"a");
+    ASSERT_EQ(File::normalizePath("a/"),"a");
+    ASSERT_EQ(File::normalizePath("a//"),"a");
+    ASSERT_EQ(File::normalizePath("a/b"),"a/b");
+    ASSERT_EQ(File::normalizePath("a//b"),"a/b");
+    ASSERT_EQ(File::normalizePath("a//b/"),"a/b");
+    ASSERT_EQ(File::normalizePath("a/./b/"),"a/./b");
+}
+
 TEST_F(FileTester,stat)
 {
     auto file = File(m_filename);
