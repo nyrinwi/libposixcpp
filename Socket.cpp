@@ -97,7 +97,6 @@ gai_vec_t Socket::getaddrinfo(const std::string& host, int *eaiVal)
         gai_vec_t::value_type rr;
         rr.first = rstr;
 
-        // FIXME does size need to be a template?
         memcpy((void*)&rr.second,p->ai_addr,sizeof(sockaddr_storage));
         ret.push_back(rr);
     }

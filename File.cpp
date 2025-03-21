@@ -10,6 +10,7 @@
 #include <sstream>
 #include <iostream>
 #include <stdexcept>
+#include <cassert>
 #include "PosixError.h"
 #include "File.h"
 
@@ -67,6 +68,7 @@ File& File::operator=(const File& other) noexcept // copy
     m_filename = other.m_filename;
     m_fd = other.m_fd;
     m_mode = ::fcntl(m_fd,F_GETFL)&MODE_MASK;
+    m_stat = other.m_stat;
     m_fromFilename = other.m_fromFilename;
     return *this;
 }
@@ -80,6 +82,8 @@ File::File(File&& other) noexcept // move
     other.m_fd = -1;
     other.m_filename.clear();
     other.m_mode = 0;
+    struct stat zz{0};
+    other.m_stat = zz;
 }
 
 File& File::operator=(File&& other) noexcept // move
@@ -93,6 +97,7 @@ File& File::operator=(File&& other) noexcept // move
     m_filename = other.m_filename;
     m_fd = other.m_fd;
     m_mode = ::fcntl(m_fd,F_GETFL)&MODE_MASK;
+    m_stat = other.m_stat;
     m_fromFilename = other.m_fromFilename;
     other.m_fd = -1;
     other.m_filename.clear();
@@ -319,17 +324,14 @@ bool File::is_file() const
     return S_ISREG((*m_stat).st_mode);
 }
 
-// \todo - is_mount needs work
-#if 0
 bool File::is_mount() const
 {
-    if (not S_ISDIR((*m_stat).st_mode))
+    if (not is_dir())
     {
         return false;
     }
-    auto dev = (*m_stat).st_dev;
+    return m_filename == "/" or fstat().st_dev != parent().fstat().st_dev;
 }
-#endif
 
 bool File::is_socket() const
 {
@@ -363,13 +365,19 @@ File File::parent() const
 
     size_t n = m_filename.find_last_of("/");
     File ret;
-    if (n == std::string::npos)
+    if (m_filename == ".")
     {
         /// Special case - path == "."
         ret = File(File::getcwd(),O_RDONLY).parent();
     }
+    else if (n == 0 or m_filename == "/")
+    {
+        ret = File("/");
+    }
     else
     {
+        assert(n!=std::string::npos);
+        std::string p = m_filename.substr(0,n);
         ret = File(m_filename.substr(0,n),O_RDONLY);
     }
     return ret;
@@ -387,4 +395,11 @@ std::ostream& operator<<(std::ostream& os, const File& file)
         os << "\"" << file.fd() << "\")";
     }
     return os;
+}
+
+bool File::operator==(const File& other) const
+{
+    auto lhs = fstat().st_ino;
+    auto rhs = other.fstat().st_ino;
+    return fstat().st_ino == other.fstat().st_ino;
 }

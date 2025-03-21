@@ -54,6 +54,7 @@ public:
             }
         }
     };
+
     void TearDown()
     {
         ::close(fds[0]);
@@ -308,7 +309,14 @@ TEST_F(FileTester,normalizePath)
     EXPECT_EQ(File::normalizePath("//a/b"),"/a/b");
 }
 
-TEST_F(FileTester,stat)
+TEST_F(FileTester,remove)
+{
+    File file(m_filename);
+    ASSERT_NO_THROW(file.remove());
+    ASSERT_NO_THROW(file.remove());
+}
+
+TEST_F(FileTester,fstat)
 {
     auto file = File(m_filename);
     auto sbuf = file.fstat();
@@ -415,6 +423,15 @@ TEST_F(FileTester,std_string)
     ASSERT_EQ(buf,readback);
 }
 
+TEST_F(FileTester,pathValidated)
+{
+    File devNull("/dev/null");
+    ASSERT_TRUE(devNull.pathValidated());
+
+    File fd(devNull.fd());
+    ASSERT_FALSE(fd.pathValidated());
+}
+
 TEST_F(FileTester,getSize)
 {
     File file(m_filename);
@@ -440,6 +457,17 @@ TEST_F(FileTester,is_file)
     auto file = File(m_filename,O_RDONLY);
     EXPECT_TRUE(file.is_file());
     testMutuallyExlusiveIsMethods(file);
+}
+
+TEST_F(FileTester,is_mount)
+{
+    ASSERT_TRUE(File("/dev/shm").is_mount());
+    ASSERT_TRUE(File("/dev").is_mount());
+    ASSERT_TRUE(File("/proc").is_mount());
+    ASSERT_TRUE(File("/").is_mount());
+    ASSERT_FALSE(File("/tmp").is_mount());
+    ASSERT_FALSE(File(".").is_mount());
+    ASSERT_FALSE(File(m_filename).is_mount());
 }
 
 TEST_F(FileTester,is_socket)
@@ -481,10 +509,18 @@ TEST_F(FileTester,is_dir)
 
 TEST_F(FileTester,is_symlink)
 {
-    auto file = File("/dev/stdout",O_RDONLY);
-    EXPECT_TRUE(file.is_fifo()) << whatIsIt(file);
-    ASSERT_TRUE(file.is_symlink()) << whatIsIt(file);
-    testMutuallyExlusiveIsMethods(file);
+    auto procSelf = File("/proc/self",O_RDONLY);
+    EXPECT_TRUE(procSelf.is_dir()) << whatIsIt(procSelf);
+    ASSERT_TRUE(procSelf.is_symlink()) << whatIsIt(procSelf);
+    testMutuallyExlusiveIsMethods(procSelf);
+
+    File fd(open("/dev/null",O_RDWR));
+    ASSERT_FALSE(fd.is_symlink()) << "fd cannot be a symlink";
+
+    auto file = File(m_filename);
+    ASSERT_FALSE(file.is_symlink());
+    file.remove();
+    ASSERT_FALSE(file.is_symlink());
 }
 
 TEST_F(FileTester,parent)
@@ -497,4 +533,15 @@ TEST_F(FileTester,parent)
     parent = parent.parent();
     ASSERT_NE(".",parent.filename()) << parent;
     ASSERT_EQ(0U,cwd.find(parent.filename())) << parent;
+
+    File dev("/dev");
+    ASSERT_NO_THROW(dev.parent()) << dev;
+    ASSERT_NO_THROW(dev.parent().parent());
+
+    File fd(open("/dev/null",O_RDWR));
+    ASSERT_THROW(fd.parent(),PosixError);
+
+    // parent of / is /
+    File root("/");
+    ASSERT_TRUE(root==root.parent()) << root << ", " << root.parent();
 }

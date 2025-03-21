@@ -195,6 +195,8 @@ public:
 
     /// Return true if fd is a symbolic link. Uses cached fstat
     bool is_symlink() const;
+
+    bool operator==(const File& other) const;
 };
 
 };
