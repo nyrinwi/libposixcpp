@@ -545,3 +545,15 @@ TEST_F(FileTester,parent)
     File root("/");
     ASSERT_TRUE(root==root.parent()) << root << ", " << root.parent();
 }
+
+TEST_F(FileTester,ostream)
+{
+    std::ostringstream oss;
+    File file(m_filename);
+    oss << file;
+    ASSERT_NE(0U,oss.str().size());
+    auto n = oss.str().find(m_filename);
+    ASSERT_NE(std::string::npos,n) << file;
+    n = oss.str().find("File");
+    ASSERT_NE(std::string::npos,n) << file;
+}
