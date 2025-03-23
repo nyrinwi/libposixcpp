@@ -399,7 +399,5 @@ std::ostream& operator<<(std::ostream& os, const File& file)
 
 bool File::operator==(const File& other) const
 {
-    auto lhs = fstat().st_ino;
-    auto rhs = other.fstat().st_ino;
     return fstat().st_ino == other.fstat().st_ino;
 }
