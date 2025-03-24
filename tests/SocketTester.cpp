@@ -281,3 +281,10 @@ TEST_F(ClientSocketTester,sendto)
     ASSERT_EQ(s_message.size(),(unsigned)r) << strerror(errno) << " fd=" << sock.fd();
 }
 
+TEST_F(ClientSocketTester,badconn)
+{
+    // Attempt to connect to non-existent host
+    ClientSocket<AF_INET,SOCK_STREAM> client("nosuhchost",sinkPort);
+    ASSERT_THROW(client.connect(),PosixError);
+}
+
