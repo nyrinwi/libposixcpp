@@ -34,11 +34,8 @@ public:
     /// Calls open() on the given filename. Throws PosixError if open returns -1.
     File(const std::string& filename, int posixFlags=O_RDONLY, int perm=PERM_GRWX);
 
-    /// Calls fcntl(F_GETFL) on the fd and throws PosixError if fcntl returns -1.
     /// Destructor will call close() on the input file descriptor
     File(int fd, const std::string& filename="unnamed");
-
-    // \todo make dup available?
 
     File(const File& other) noexcept;     // copy
     File& operator=(const File& other) noexcept; // copy
@@ -117,10 +114,14 @@ public:
     /// Wrapper for getcwd(3)
     static std::string getcwd();
 
+    // Wrapper for dup(2), throws PosixError on failure
+    static File dup(int fd);
+
     /// Remove duplicate slashes and trailing slashes. Return path start with '/' or './'
     static std::string normalizePath(const std::string& path);
 
     // \todo fcntl
+    /// Calls fcntl(F_GETFL) on the fd and throws PosixError if fcntl returns -1.
 
     /// Write using a std::vector or std::string
     template <typename Typ>

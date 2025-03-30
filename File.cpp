@@ -53,7 +53,7 @@ File::~File()
 
 File::File(const File& other) noexcept // copy
 : m_filename(other.m_filename),
-  m_fd(dup(other.m_fd)),
+  m_fd(::dup(other.m_fd)),
   m_mode(::fcntl(m_fd,F_GETFL)&MODE_MASK)
 {
 }
@@ -244,6 +244,13 @@ std::string File::getcwd()
     char* retPtr = ::getcwd(&path[0],PATH_MAX);
     PosixError::ASSERT(retPtr!=NULL,"getcwd");
     return retPtr;
+}
+
+File File::dup(int fd)
+{
+    int newFd = ::dup(fd);
+    PosixError::ASSERT(newFd!=-1);
+    return File(newFd);
 }
 
 std::string File::normalizePath(const std::string& path)

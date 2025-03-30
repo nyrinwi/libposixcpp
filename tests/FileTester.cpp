@@ -284,6 +284,13 @@ TEST_F(FileTester,getcwd)
     ASSERT_TRUE(cwd[0] = '/') << cwd;
 }
 
+TEST_F(FileTester,dup)
+{
+    File file(m_filename);
+    File fileDup = File::dup(file.fd());
+    ASSERT_NE(file.fd(),fileDup.fd());
+}
+
 TEST_F(FileTester,normalizePath)
 {
     EXPECT_EQ(File::normalizePath(""),"");
@@ -546,14 +553,28 @@ TEST_F(FileTester,parent)
     ASSERT_TRUE(root==root.parent()) << root << ", " << root.parent();
 }
 
-TEST_F(FileTester,ostream)
+TEST_F(FileTester,ostream1)
 {
     std::ostringstream oss;
     File file(m_filename);
     oss << file;
     ASSERT_NE(0U,oss.str().size());
     auto n = oss.str().find(m_filename);
+    ASSERT_FALSE(std::string::npos==n) << file;
+    n = oss.str().find("File");
     ASSERT_NE(std::string::npos,n) << file;
+}
+
+TEST_F(FileTester,ostream2)
+{
+    std::ostringstream oss;
+    File file(m_filename);
+    int fd = dup(file.fd());
+    file = File(fd);
+    oss << file;
+    ASSERT_NE(0U,oss.str().size());
+    auto n = oss.str().find(std::to_string(fd));
+    ASSERT_FALSE(std::string::npos==n) << file;
     n = oss.str().find("File");
     ASSERT_NE(std::string::npos,n) << file;
 }
