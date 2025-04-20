@@ -100,6 +100,12 @@ public:
 
     enum NetcatType {UDP,TCP};
 
+    // socat can be a source or a sink
+    // in source mode it reads from stdin and writes that to a client socket
+    // in sink mode it reads from the client socket and writes to stdout
+    //
+    // This function uses fopen() to open stdin or stdout based on the flag isSource
+    // and returns that FILE* 
     FILE* socat(const NetcatType& nc, int port, bool isSource)
     {
         std::string protocol = (nc==UDP) ? "UDP" : "TCP";
@@ -131,6 +137,7 @@ public:
         usleep(10000);
     };
 
+    // Write s_message to the source's stdin
     void writeSource()
     {
         assert(fpTcpSource != NULL);
@@ -139,6 +146,7 @@ public:
         fflush(fpTcpSource);
     }
 
+    // Read data from the sink's stdout
     std::string readSink(FILE* fp)
     {
         std::vector<char> ret(256);
@@ -148,6 +156,7 @@ public:
         return std::string(&ret[0],n);
     }
 
+    // Call pclose(fp)
     bool waitForSink(FILE* &fp)
     {
         if (fp == NULL)
@@ -270,15 +279,80 @@ TEST_F(ClientSocketTester,send)
 TEST_F(ClientSocketTester,sendto)
 {
     Socket sock(AF_INET,SOCK_DGRAM);
-    auto found = sock.getaddrinfo("localhost");
-    ASSERT_EQ(1U,found.size());
+    auto aiVec = sock.getaddrinfo("localhost");
+    ASSERT_EQ(1U,aiVec.size());
 
-    auto sa = reinterpret_cast<sockaddr*>(&found[0].second);
-    auto sai = reinterpret_cast<sockaddr_in*>(&found[0].second);
+    auto sai = reinterpret_cast<sockaddr_in*>(&aiVec.front().second);
     sai->sin_port = htons(sinkPort);
 
-    auto r = sock.sendto(&s_message[0],s_message.size(),0, sa, sizeof(*sai));
-    ASSERT_EQ(s_message.size(),(unsigned)r) << strerror(errno) << " fd=" << sock.fd();
+    auto r = sock.sendto(&s_message[0],s_message.size(),0, (sockaddr*)sai, sizeof(*sai));
+    ASSERT_NE(-1,r) << strerror(errno) << " fd=" << sock.fd();
+    ASSERT_EQ(s_message.size(),(unsigned)r) << "invalid size";
+}
+
+TEST_F(ClientSocketTester,sendmsg)
+{
+    // Connect to sink
+    ClientSocket<AF_INET,SOCK_STREAM> client("localhost",sinkPort);
+    ASSERT_NO_THROW(client.connect());
+
+    // Create the msghdr
+    iovec iov = {(void*)&s_message[0],s_message.size()};
+    msghdr mhdr = {nullptr,0,&iov,1,nullptr,0,0};
+
+    // Write to the server
+    auto r = client.sendmsg(&mhdr,0);
+    ASSERT_EQ(s_message.size(),(unsigned)r);
+
+    client.close();
+
+    auto text = readSink(fpTcpSink);
+    ASSERT_EQ(s_message,text);
+}
+
+TEST_F(ClientSocketTester,recvfrom)
+{
+    // Give the source some data
+    writeSource();
+
+    // Connect to source
+    ClientSocket<AF_INET,SOCK_STREAM> client("localhost",sourcePort);
+    ASSERT_NO_THROW(client.connect());
+
+    // Read from source
+    std::array<char,256> buf;
+    auto r = client.recvfrom(&buf[0],s_message.size(),0,NULL,NULL);
+    ASSERT_EQ((unsigned)r,s_message.size());
+
+    // Verify we got s_message
+    ASSERT_EQ((unsigned)r,s_message.size());
+    client.close();
+}
+
+TEST_F(ClientSocketTester,recvmsg)
+{
+    // Give the source some data
+    writeSource();
+
+    // Connect to source
+    ClientSocket<AF_INET,SOCK_STREAM> client("localhost",sourcePort);
+    ASSERT_NO_THROW(client.connect());
+
+    // Read from source
+    std::array<char,256> buf;
+    char* ptr = &buf[0];
+
+    // Create the msghdr
+    iovec iov = {ptr,sizeof(buf)};
+    msghdr mhdr = {nullptr,0,&iov,1,nullptr,0,0};
+
+    int r;
+    ASSERT_NO_THROW(r = client.recvmsg(&mhdr));
+    ASSERT_EQ((unsigned)r,s_message.size());
+
+    // Verify we got s_message
+    ASSERT_EQ((unsigned)r,s_message.size());
+    client.close();
 }
 
 TEST_F(ClientSocketTester,badconn)
