@@ -25,10 +25,10 @@ LIBSOURCES=\
 LIBOBJS=$(LIBSOURCES:.cpp=.o)
 
 all:: libposixcpp.a
-	make -C tests 
+	+make -C tests
 
 test: libposixcpp.a
-	make -C tests test
+	+make -C tests test
 
 libposixcpp.a: $(LIBOBJS)
 	ar rcs $@ $(LIBOBJS)
@@ -41,7 +41,7 @@ html:
 
 coverage:
 	make clean
-	make -B -j gcov=1
+	make -B -j4 gcov=1
 	make test
 	make html
 
