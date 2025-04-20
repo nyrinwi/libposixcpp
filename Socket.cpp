@@ -48,9 +48,40 @@ ssize_t Socket::send(const void *buf, size_t len, int flags) const
     return r;
 }
 
+ssize_t Socket::sendto(const void *buf, size_t len, int flags,
+              const struct sockaddr *dest_addr, socklen_t addrlen) const
+{
+    ssize_t r = ::sendto(fd(),buf,len,flags,dest_addr,addrlen);
+    PosixError::ASSERT(r != -1);
+    return r;
+}
+
+ssize_t Socket::sendmsg(const struct msghdr *msg, int flags) const
+{
+    ssize_t r = ::sendmsg(fd(),msg,flags);
+    PosixError::ASSERT(r != -1);
+    return r;
+}
+
 ssize_t Socket::recv(void *buf, size_t len, int flags)
 {
     ssize_t r = ::recv(fd(),buf,len,flags);
+    PosixError::ASSERT(r != -1);
+    return r;
+}
+
+ssize_t Socket::recvfrom(void *buf, size_t len, int flags,
+                     struct sockaddr *src_addr, socklen_t *addrlen)
+{
+    // TODO: implement - can we provide src_addr here?
+    ssize_t r = ::recvfrom(fd(),buf,len,flags,src_addr,addrlen);
+    PosixError::ASSERT(r != -1);
+    return r;
+}
+
+ssize_t Socket::recvmsg(struct msghdr *msg, int flags)
+{
+    ssize_t r = ::recvmsg(fd(),msg,flags);
     PosixError::ASSERT(r != -1);
     return r;
 }
@@ -109,8 +140,3 @@ gai_vec_t Socket::getaddrinfo(const std::string& host, int domain, int *eaiVal)
     return Socket(domain, SOCK_STREAM).getaddrinfo(host,eaiVal);
 }
 
-ssize_t Socket::sendto(const void *buf, size_t len, int flags,
-                   const struct sockaddr *dest_addr, socklen_t addrlen)
-{
-    return ::sendto(fd(),buf,len,flags,dest_addr,addrlen);
-}

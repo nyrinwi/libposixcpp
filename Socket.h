@@ -14,6 +14,8 @@ namespace posixcpp
 {
 
 typedef std::vector<std::string> stringvec_t;
+
+// TODO can getaddrinfo return specific structs based on SOCK_xyz?
 typedef std::vector<std::pair<std::string,sockaddr_storage>> gai_vec_t;
 
 class Socket
@@ -68,22 +70,24 @@ public:
     }
 
     ssize_t send(const void *buf, size_t len, int flags=0) const;
-    // TODO: sendmsg
+
+    ssize_t sendto(const void *buf, size_t len, int flags,
+                  const struct sockaddr *dest_addr, socklen_t addrlen) const;
+
+    ssize_t sendmsg(const struct msghdr *msg, int flags=0) const;
 
     ssize_t recv(void *buf, size_t len, int flags=0);
 
+    // TODO: get rid of addrlen
     ssize_t recvfrom(void *buf, size_t len, int flags,
                      struct sockaddr *src_addr, socklen_t *addrlen);
 
-    // TODO: recvmsg
+    ssize_t recvmsg(struct msghdr *msg, int flags=0);
 
     void close()
     {
         m_file.close();
     }
-
-    ssize_t sendto(const void *buf, size_t len, int flags,
-                   const struct sockaddr *dest_addr, socklen_t addrlen);
 };
 
 // socket
@@ -128,6 +132,7 @@ public:
     };
 };
 
-}
-#endif
+} // namespace posixcpp
+
+#endif // #ifndef SOCKET_H
 
