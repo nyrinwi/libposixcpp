@@ -300,6 +300,14 @@ std::string File::normalizePath(const std::string& path)
     return oss.str();
 }
 
+struct stat File::lstat(const std::string& filename)
+{
+    struct stat ret;
+    int r = ::lstat(filename.c_str(),&ret);
+    PosixError::ASSERT(r!=-1);
+    return ret;
+}
+
 size_t File::getSize(bool useCached)
 {
     auto stat = fstat(not useCached);
@@ -352,13 +360,18 @@ bool File::is_symlink() const
     {
         return false;
     }
-    struct stat sbuf;
-    int r = lstat(m_filename.c_str(),&sbuf);
-    if (r == -1)
+    bool ret = false;
+    try
     {
-        return false;
+        struct stat sbuf;
+        sbuf = lstat(m_filename);
+        ret = S_ISLNK(sbuf.st_mode);
     }
-    return S_ISLNK(sbuf.st_mode);
+    catch(const std::exception & e)
+    {
+        ret = false;
+    }
+    return ret;
 }
 
 File File::parent() const

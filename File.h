@@ -100,8 +100,6 @@ public:
     /// Const version of fstat (no force allowed)
     struct stat fstat() const;
 
-    /// \todo add lstat()
-
     /// Wrapper for mkstemp(3)
     static File mkstemp(const std::string& templ);
 
@@ -121,7 +119,10 @@ public:
     static std::string normalizePath(const std::string& path);
 
     // \todo fcntl
-    /// Calls fcntl(F_GETFL) on the fd and throws PosixError if fcntl returns -1.
+    /// Calls fcntl() on the fd and throws PosixError if fcntl returns -1.
+
+    /// Wrapper for ::lstat()
+    static struct stat lstat(const std::string& filename);
 
     /// Write using a std::vector or std::string
     template <typename Typ>
